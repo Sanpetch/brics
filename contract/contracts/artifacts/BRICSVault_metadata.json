@@ -1,0 +1,661 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_BRICS_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_BRL_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_RUB_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_INR_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_CNY_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_ZAR_Address",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_USD_Address",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "adminAddress",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "bricsToken",
+				"outputs": [
+					{
+						"internalType": "contract BRICSToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "brlToken",
+				"outputs": [
+					{
+						"internalType": "contract BRLCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"name": "cbdcTokens",
+				"outputs": [
+					{
+						"internalType": "contract ERC20",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "cnyToken",
+				"outputs": [
+					{
+						"internalType": "contract CNYCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"name": "collateralBalance",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "collateralRatio",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string[]",
+						"name": "symbols",
+						"type": "string[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "amounts",
+						"type": "uint256[]"
+					}
+				],
+				"name": "depositCollateral",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"name": "exchangeRates",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getAdmin",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "token",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					}
+				],
+				"name": "getAllowance",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					}
+				],
+				"name": "getBRICSBalance",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "tokenSymbol",
+						"type": "string"
+					}
+				],
+				"name": "getBalance",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					}
+				],
+				"name": "getExchangeRate",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					}
+				],
+				"name": "getUserCollateral",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					}
+				],
+				"name": "getUserCollateralInUsd",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					}
+				],
+				"name": "getUserCollateralValue",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "totalUsdValue",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"name": "goldExchangeRates",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "inrToken",
+				"outputs": [
+					{
+						"internalType": "contract INRCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "inventiveFee",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "bricsAmount",
+						"type": "uint256"
+					}
+				],
+				"name": "redeemBRICS",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "bricsAmount",
+						"type": "uint256"
+					}
+				],
+				"name": "redeemBRICSV1",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "rubToken",
+				"outputs": [
+					{
+						"internalType": "contract RUBCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					}
+				],
+				"name": "setExchangeRate",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					}
+				],
+				"name": "setGoldExchangeRate",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "newRate",
+						"type": "uint256"
+					}
+				],
+				"name": "setStabilityFeeRate",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "stabilityFeeRate",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "usdToken",
+				"outputs": [
+					{
+						"internalType": "contract USDCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "zarToken",
+				"outputs": [
+					{
+						"internalType": "contract ZARCBDCToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contract/contracts/BRICSVault.sol": "BRICSVault"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts/interfaces/draft-IERC6093.sol": {
+			"keccak256": "0x880da465c203cec76b10d72dbd87c80f387df4102274f23eea1f9c9b0918792b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://399594cd8bb0143bc9e55e0f1d071d0d8c850a394fb7a319d50edd55d9ed822b",
+				"dweb:/ipfs/QmbPZzgtT6LEm9CMqWfagQFwETbV1ztpECBB1DtQHrKiRz"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+			"keccak256": "0xbf61ab2ae1d575a17ea58fbb99ca232baddcc4e0eeea180e84cbc74b0c348b31",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://4e0968705bad99747a8e5288aa008678c2be2f471f919dce3925a3cc4f1dee09",
+				"dweb:/ipfs/QmbAFnCQfo4tw6ssfQSjhA5LzwHWNNryXN8bX7ty8jiqqn"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db",
+				"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+			"keccak256": "0x70f2f713b13b7ce4610bcd0ac9fec0f3cc43693b043abcb8dc40a42a726eb330",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c13d13304ac79a83ab1c30168967d19e2203342ebbd6a9bbce4db7550522dcbf",
+				"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r"
+			]
+		},
+		"@openzeppelin/contracts/utils/Context.sol": {
+			"keccak256": "0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12",
+				"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
+			]
+		},
+		"contract/contracts/BRICSToken.sol": {
+			"keccak256": "0x01f6ec61a86282ed99dffe905ca35b092c4ea52f6596f5a14aedb6f46bd05063",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://f935c2ff86023f8fdc876902539bee478fbeb697f24eabe9b96d58610d13317f",
+				"dweb:/ipfs/QmZLqi6pbys9Yd5szznryDwz179Ep9xfqomeMZQa2cG28d"
+			]
+		},
+		"contract/contracts/BRICSVault.sol": {
+			"keccak256": "0x216c4cd6624210d4a18a773a40bcde95b0d7fda7c6566f6b9451a53f454e9a25",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://fab5b577ff33bb63f500681ddfeaa0a307e519870653bc794f387a4b547cc341",
+				"dweb:/ipfs/QmZtUF1c7fkjMtfupwaynrNbTPijH1PvT2r7tAMmcJGsFH"
+			]
+		},
+		"contract/contracts/BRLCBDCToken.sol": {
+			"keccak256": "0x8f7f9cc3913ce2a3c957a89b14a79c30ff8a196ab5910d2904a5368eaaecd95d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://26bec2ab75b1b0ddb9620a7e5c4e9809cd2dc65e6bfed7e8a725c40058556744",
+				"dweb:/ipfs/QmZL3gWY1PhL9SHg5hiLqvfb8BM2W6LNfWawLHt3tGBECv"
+			]
+		},
+		"contract/contracts/CNYCBDCToken.sol": {
+			"keccak256": "0x982c9c8b3c14b683c9db7d25e369237f3c238cec145988ca4ba6b3f8449a0221",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://610f3335c88653b53d04333e880c3e1bbaacd0f0ba6308020942a5c12039cb90",
+				"dweb:/ipfs/QmddxRkHuzXXJwCMc1MjmF4pnWoE4PyqXKuZs1ZL18sGSA"
+			]
+		},
+		"contract/contracts/INRCBDCToken.sol": {
+			"keccak256": "0x6ffe7abc2cef3161b99d36f78dc7ece7d24d343c70e93f21bbf138373641024a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://110bf10d919c43fcbac62d873b905912f1a0ce9a1bb442d4a0fb3b110fec2864",
+				"dweb:/ipfs/QmQagnM9caMUgDA3iyvQtvum4Bqe2HWDqrZBX6bKALfKnv"
+			]
+		},
+		"contract/contracts/RUBCBDCToken.sol": {
+			"keccak256": "0x906a5bd689153be71e9b54e67a58dd2b7bb275afdf889eb803d72613b7e1ad65",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://8fe56c596d6d2d6afe357618ad8fb1db3dd34318fc5d9cbc8c9f3d0f905ded58",
+				"dweb:/ipfs/QmVjfC52LBkQCwji4sjsRRoDFYBL8MGWthySjzpVr6JWDv"
+			]
+		},
+		"contract/contracts/USDCBDCToken.sol": {
+			"keccak256": "0x6d9940580d8079fd8c783e351ec9583bd6d6aa557e8d8ef7c3ebaef0c95fc8f7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://849d9120db5599e04a705aa201fd2fc43354dcf55fee783293f641b317fff553",
+				"dweb:/ipfs/QmUkK19GfR8xYqgNbcuVAp7zJMTkD7LMdmc2JBkUas8pqd"
+			]
+		},
+		"contract/contracts/ZARCBDCToken.sol": {
+			"keccak256": "0xbee6bc380d22a4dca64c2f8d3db35ac542213cb1d8fa43bfbc0a8501a64173d7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://54919bd1e7e66d49756d86d1a3894086fd3504c1198d6affd91ddb4f90f95987",
+				"dweb:/ipfs/QmTC4sYNKZmfYgxJEqMvyuTaTP4jwDmUXGQ9JkbBV4hw6N"
+			]
+		}
+	},
+	"version": 1
+}
