@@ -527,7 +527,11 @@
 		],
 		"devdoc": {
 			"kind": "dev",
-			"methods": {},
+			"methods": {
+				"redeemBRICS(uint256)": {
+					"details": "Withdraw/redeem common workflow. function _withdraw( address caller, address receiver, address owner, uint256 assets, uint256 shares ) internal virtual { if (caller != owner) { _spendAllowance(owner, caller, shares); } // If _asset is ERC-777, `transfer` can trigger a reentrancy AFTER the transfer happens through the // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer, // calls the vault, which is assumed not malicious. // // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the // shares are burned and after the assets are transferred, which is a valid state. _burn(owner, shares); SafeERC20.safeTransfer(_asset, receiver, assets); emit Withdraw(caller, receiver, owner, assets, shares); } function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256) { uint256 maxShares = maxRedeem(owner); if (shares > maxShares) { revert ERC4626ExceededMaxRedeem(owner, shares, maxShares); } uint256 assets = previewRedeem(shares); _withdraw(_msgSender(), receiver, owner, assets, shares); return assets; }"
+				}
+			},
 			"version": 1
 		},
 		"userdoc": {
@@ -593,67 +597,67 @@
 			]
 		},
 		"contract/contracts/BRICSToken.sol": {
-			"keccak256": "0x01f6ec61a86282ed99dffe905ca35b092c4ea52f6596f5a14aedb6f46bd05063",
+			"keccak256": "0xadeb2a514545207ba3f97dc5fdff573ab59ccb6f1fa60ac1369bb1b39c58d9bd",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://f935c2ff86023f8fdc876902539bee478fbeb697f24eabe9b96d58610d13317f",
-				"dweb:/ipfs/QmZLqi6pbys9Yd5szznryDwz179Ep9xfqomeMZQa2cG28d"
+				"bzz-raw://cb024021d0f4941bb1ddff91832ba82679627abc49fd051a2d55ba2fccc1bcb1",
+				"dweb:/ipfs/Qmeko6HF2kPBgrhcYA4UCzjh9aYeJVprmCykhC2J1gsbqo"
 			]
 		},
 		"contract/contracts/BRICSVault.sol": {
-			"keccak256": "0x216c4cd6624210d4a18a773a40bcde95b0d7fda7c6566f6b9451a53f454e9a25",
+			"keccak256": "0x4e8ec216467e5590f0985785e749ce46af984020f786f217afb82b0eaa138d65",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://fab5b577ff33bb63f500681ddfeaa0a307e519870653bc794f387a4b547cc341",
-				"dweb:/ipfs/QmZtUF1c7fkjMtfupwaynrNbTPijH1PvT2r7tAMmcJGsFH"
+				"bzz-raw://e911b16811a128b91f914b360f8b40d26b2b08d77887085333e9638a974441b8",
+				"dweb:/ipfs/QmW9e6p5zAUaHafNS55shMKrk22davAUGoBFKJ8G4QiDxK"
 			]
 		},
 		"contract/contracts/BRLCBDCToken.sol": {
-			"keccak256": "0x8f7f9cc3913ce2a3c957a89b14a79c30ff8a196ab5910d2904a5368eaaecd95d",
+			"keccak256": "0x2430d195483a5d7ad9010c0b973453c3eaf3cff9fed64048b025c3f3bf1d071d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://26bec2ab75b1b0ddb9620a7e5c4e9809cd2dc65e6bfed7e8a725c40058556744",
-				"dweb:/ipfs/QmZL3gWY1PhL9SHg5hiLqvfb8BM2W6LNfWawLHt3tGBECv"
+				"bzz-raw://185962dd53e3378328c2849cb6ff180df7b8d925498f15873f8e05c0a8ce21f6",
+				"dweb:/ipfs/QmQimsyAcoa4BZMU93KmgALQ9GLGM1vS2QoKuS4VjbDjjq"
 			]
 		},
 		"contract/contracts/CNYCBDCToken.sol": {
-			"keccak256": "0x982c9c8b3c14b683c9db7d25e369237f3c238cec145988ca4ba6b3f8449a0221",
+			"keccak256": "0x5b15391a153b021deda3cd582572424ee76b71bc702c65dc11e28b205729b6a4",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://610f3335c88653b53d04333e880c3e1bbaacd0f0ba6308020942a5c12039cb90",
-				"dweb:/ipfs/QmddxRkHuzXXJwCMc1MjmF4pnWoE4PyqXKuZs1ZL18sGSA"
+				"bzz-raw://9b8a823f31371a1085f399e97f5a69e490c8698e9c98d59f82f7c4674c55954a",
+				"dweb:/ipfs/QmWSoqfQsh2zXUhFmupyZp7a7iYRaCJ2HWFuQHe4ioZVVr"
 			]
 		},
 		"contract/contracts/INRCBDCToken.sol": {
-			"keccak256": "0x6ffe7abc2cef3161b99d36f78dc7ece7d24d343c70e93f21bbf138373641024a",
+			"keccak256": "0x78ae8b6faed35f6380d21f12563416ab745642b2f93cd1488bef317a001076b8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://110bf10d919c43fcbac62d873b905912f1a0ce9a1bb442d4a0fb3b110fec2864",
-				"dweb:/ipfs/QmQagnM9caMUgDA3iyvQtvum4Bqe2HWDqrZBX6bKALfKnv"
+				"bzz-raw://c59173df7628861a23360fc051b5085fbc5d5d6a5e8c555265b1355af1661158",
+				"dweb:/ipfs/QmeSMMXFTWfkffpTetZ2t2JA1V43XUPxx6NwMgK6t2ppUe"
 			]
 		},
 		"contract/contracts/RUBCBDCToken.sol": {
-			"keccak256": "0x906a5bd689153be71e9b54e67a58dd2b7bb275afdf889eb803d72613b7e1ad65",
+			"keccak256": "0x94eee1420409ab43c80e5e07759f024b0dbe922a57eb69e89db672b7bcb1f2da",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8fe56c596d6d2d6afe357618ad8fb1db3dd34318fc5d9cbc8c9f3d0f905ded58",
-				"dweb:/ipfs/QmVjfC52LBkQCwji4sjsRRoDFYBL8MGWthySjzpVr6JWDv"
+				"bzz-raw://0cd17e61de50c440f79f1563f73e0919a0bcdafc409c753f7b3ebfb4733dd982",
+				"dweb:/ipfs/QmVASXAgHTcMCpCAPTaH3xWdvCGfa8aPmdLwvK4pe2K2sX"
 			]
 		},
 		"contract/contracts/USDCBDCToken.sol": {
-			"keccak256": "0x6d9940580d8079fd8c783e351ec9583bd6d6aa557e8d8ef7c3ebaef0c95fc8f7",
+			"keccak256": "0xc5023a75fec4c6a61ac07bd87e2acaabba36c6bec22ac64274bcfcecaee4ffe1",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://849d9120db5599e04a705aa201fd2fc43354dcf55fee783293f641b317fff553",
-				"dweb:/ipfs/QmUkK19GfR8xYqgNbcuVAp7zJMTkD7LMdmc2JBkUas8pqd"
+				"bzz-raw://f15b6af5a4ab8c7398aae6f1c1c1cde228879bebdd7a931358538dae94b91132",
+				"dweb:/ipfs/QmcuiXyno9ZMnqV3DQi3arkjCNdNEGBrYogs3ZPx1bNjuf"
 			]
 		},
 		"contract/contracts/ZARCBDCToken.sol": {
-			"keccak256": "0xbee6bc380d22a4dca64c2f8d3db35ac542213cb1d8fa43bfbc0a8501a64173d7",
+			"keccak256": "0x3920856036fc36fef2574e64fc09d38b96c4b7552ce4ee34e290ecd2741408d8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://54919bd1e7e66d49756d86d1a3894086fd3504c1198d6affd91ddb4f90f95987",
-				"dweb:/ipfs/QmTC4sYNKZmfYgxJEqMvyuTaTP4jwDmUXGQ9JkbBV4hw6N"
+				"bzz-raw://a059d6f415efa3335007d28dd587e15d942fc6c0621ba258f8dfc9a4cca6ab14",
+				"dweb:/ipfs/QmTj3XJu6ENntfExcCKsrCGS6CDSP5dJRyhpSxpiKcnRM4"
 			]
 		}
 	},

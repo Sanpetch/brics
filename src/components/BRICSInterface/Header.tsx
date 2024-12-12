@@ -2,6 +2,8 @@
 import { Globe, BellRing, Shield } from 'lucide-react';
 
 export default function Header() {
+
+  
   return (
     <nav className="bg-white shadow-sm rounded-lg p-4 mb-8">
       <div className="flex items-center justify-between">

@@ -8,7 +8,7 @@ contract RUBCBDCToken is ERC20 {
 
     event VaultCheck(address indexed vaultAddress, address indexed caller);
    
-    constructor() ERC20("RUB Stablecoin", "RUB_CBDC") {
+    constructor() ERC20("Digital Ruble", "RUB_CBDC") {
         _mint(msg.sender, 100000 * (10 ** decimals())); // need use 2 or 4 digit.
     }
    

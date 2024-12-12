@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 //import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 // After import from  @openzeppelin then can't deploy.
 
-import "./BRICSToken.sol";
+import "./BRICSToken.sol"; // BRICS
 import "./BRLCBDCToken.sol"; // BRL
 import "./RUBCBDCToken.sol"; // RUB
 import "./INRCBDCToken.sol"; // INR
@@ -170,6 +170,45 @@ contract BRICSVault {
         return (userCollateralValue * 100) / userBricsBalance;
     }
     */
+   
+    /**
+     * @dev Withdraw/redeem common workflow.
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal virtual {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        // If _asset is ERC-777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
+        // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
+        // calls the vault, which is assumed not malicious.
+        //
+        // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the
+        // shares are burned and after the assets are transferred, which is a valid state.
+        _burn(owner, shares);
+        SafeERC20.safeTransfer(_asset, receiver, assets);
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256) {
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
+
+        uint256 assets = previewRedeem(shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+
+        return assets;
+    }
+    */
+
 
 
     // Redeem BRICS token and return collateral
@@ -254,6 +293,7 @@ contract BRICSVault {
 
 
     // Utility: คำนวณมูลค่าหลักประกัน
+    
     // Calculate total collateral value in USD for a user
     function getUserCollateralValue(address user) public view returns (uint256 totalUsdValue) {
         string[6] memory supportedSymbols = ["CNY", "RUB", "INR", "BRL", "ZAR", "USD"];

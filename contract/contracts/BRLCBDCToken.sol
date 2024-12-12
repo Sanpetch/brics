@@ -8,7 +8,7 @@ contract BRLCBDCToken is ERC20 {
 
     event VaultCheck(address indexed vaultAddress, address indexed caller);
    
-    constructor() ERC20("BRL Stablecoin", "BRL_CBDC") {
+    constructor() ERC20("Digital Brazilian Real", "BRL_CBDC") {
         _mint(msg.sender, 100000 * (10 ** decimals())); // need use 2 or 4 digit.
     }
    

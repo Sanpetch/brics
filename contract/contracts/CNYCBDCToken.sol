@@ -8,7 +8,7 @@ contract CNYCBDCToken is ERC20 {
 
     event VaultCheck(address indexed vaultAddress, address indexed caller);
    
-    constructor() ERC20("CNY Stablecoin", "CNY_CBDC") {
+    constructor() ERC20("Digital Yuan", "CNY_CBDC") {
         _mint(msg.sender, 100000 * (10 ** decimals())); // need use 2 or 4 digit.
     }
    
