@@ -94,7 +94,9 @@ export default function CBDCPools() {
                   ? balances[cbdc.address] === "Invalid Address"
                     ? "Invalid Address"
                     : `${balances[cbdc.address]} Tokens`
-                  : "Loading..."}
+                  :  cbdc.status == 'Active' ?  ( "Loading..."  ): ("Disable" )
+                  
+                  }
               </div>
               {cbdc.status == 'Active' ?  (
               <div className="text-sm text-green-600">{cbdc.status}</div>

@@ -1378,11 +1378,11 @@
 	},
 	"sources": {
 		"contract/contracts/BRICSVaultV2.sol": {
-			"keccak256": "0xd07c9fb986ec3665b10bcc5ee9845bb763f0d124d3699da699c7117002de690c",
+			"keccak256": "0x3d14908e0e1423efb04e14bf92276aefe7302e8b519dd45b35f1b751f8006a8c",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://f1831cde11cd0cbd261790ac79ea8730cd0e8bca3bc9717aacab2bb8b4a22761",
-				"dweb:/ipfs/QmderbBEP4EDp9pSfjQndyieeNyjvGHnLzwhNGdHgfBWH6"
+				"bzz-raw://e1d668d53ecd0f88e6a46a99c954fd045cf5512c9faa1d120c2fb8231a3c581d",
+				"dweb:/ipfs/QmQCFAnQCaw5n4P8TMPkqoEPNkyiFy3ZYUkpS3HvZPDFVy"
 			]
 		},
 		"https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/interfaces/IERC1363.sol": {

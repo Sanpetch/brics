@@ -16,7 +16,7 @@ contract BRICSVaultV2 is ERC4626 {
     address public adminAddress;
     uint256 public collateralRatio = 150; // 150%
 
-    address public constant CNY = 0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d;
+    address public constant CNY = 0x742142f1Dc4129fcBA7bE6bbBcd2680073C9C1E1;
     address public constant RUB = 0xd2a5bC10698FD955D1Fe6cb468a17809A08fd005;
     address public constant INR = 0x7EF2e0048f5bAeDe046f6BF797943daF4ED8CB47;
 
@@ -38,6 +38,12 @@ contract BRICSVaultV2 is ERC4626 {
             asset: IERC20(INR), 
             exchangeRate: 12  // 1 INR = 0.012 CNY
         });
+
+        vaults["BRICS"] = VaultInfo({
+            asset: IERC20(_asset), 
+            exchangeRate: 1  // 1 BRICS = 1 CNY
+        });
+
 
         currencyWeights["CNY"] = 20;
         currencyWeights["RUB"] = 50;
@@ -167,23 +173,38 @@ contract BRICSVaultV2 is ERC4626 {
         require(vaults[symbol].exchangeRate > 0, "Invalid exchange rate");
         require(currencyWeights[symbol] > 0, "Weight not set for token");
 
-        // Transfer collateral to the contract
+
+        // ตรวจสอบการอนุมัติ
+        uint256 allowance = vaults[symbol].asset.allowance(msg.sender, address(this));
+        require(allowance >= amount, "Insufficient allowance, approve first");
+
+        // โอนโทเค็นมาที่ Vault
         vaults[symbol].asset.transferFrom(msg.sender, address(this), amount);
 
-         // Update user deposits
+         // อัปเดตการฝากของผู้ใช้
         userDeposits[msg.sender][symbol] += amount;
 
-        // Calculate the value in CNY and apply the weight
+          // คำนวณมูลค่าใน CNY และปรับค่าน้ำหนัก
         uint256 cnyValue = (amount * vaults[symbol].exchangeRate) / 1000;
         uint256 weightedValue = (cnyValue * currencyWeights[symbol]) / 100;
 
-        // Calculate BRICS tokens to mint
+           // คำนวณจำนวน BRICS ที่จะสร้าง
         uint256 value_BRICS_in_CNY = calculateBRICSValueInCNY();
         uint256 bricsToMint = (weightedValue * 100) / (value_BRICS_in_CNY * collateralRatio / 100);
         require(bricsToMint > 0, "Not enough collateral to mint BRICS");
 
         // Mint BRICS tokens
+
+        คุณพูดถูก! _mint ที่มาจาก ERC4626 หรือ ERC20 ในสัญญานี้จะสร้างโทเค็น vBRICS ซึ่งเป็นโทเค็น ERC4626 (Vault Token) ไม่ใช่โทเค็น BRICS (Stablecoin) ที่ต้องการ
+        ดังนั้น เราจำเป็นต้องใช้การโต้ตอบกับ vaults["BRICS"].asset เพื่อจัดการการสร้างโทเค็น BRICS แทน
+        
         _mint(msg.sender, bricsToMint);
+       
+        // เรียก mint จากโทเค็น BRICS
+        IERC20Mintable(address(vaults["BRICS"].asset)).mint(msg.sender, bricsToMint);
+
+        // สร้างโทเค็น BRICS และมอบให้ผู้ใช้
+        //vaults["BRICS"].asset.transfer(msg.sender, bricsToMint);
     }
 
     function previewDeposit(string memory symbol, uint256 amount) public view returns (uint256 bricsToMint) {

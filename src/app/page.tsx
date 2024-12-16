@@ -8,6 +8,11 @@ import ExchangeModule from "@/components/BRICSInterface/ExchangeModule";
 import Analytics from "@/components/BRICSInterface/Analytics";
 import RiskManagement from "@/components/BRICSInterface/RiskManagement";
 
+
+import CBDCVault from "@/components/BRICSInterface/CBDCVault";
+import DepositModule from "@/components/BRICSInterface/DepositModule";
+
+
 function ConnectWalletSection() {
   const { accountData, connectToWallet } = useWallet();
   const [initialized, setInitialized] = useState(false);
@@ -54,6 +59,9 @@ export default function Home() {
         <Header />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <VaultStatus />
+          <CBDCVault />
+          <DepositModule />
+
           <CBDCPools />
           <ExchangeModule />
           <Analytics />
