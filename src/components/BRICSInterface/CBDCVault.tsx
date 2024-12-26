@@ -8,10 +8,12 @@ import CNY_CBDC_ABI from "@/components/ABI/CNY_CBDC_Token.json";
 import INR_CBDC_ABI from "@/components/ABI/INR_CBDC_Token.json";
 import RUB_CBDC_ABI from "@/components/ABI/RUB_CBDC_Token.json";
 import BRICS_ABI from "@/components/ABI/BRICS_Token.json";
+import Vault_ABI from "@/components/ABI/Vault.json";
 
 import { Building2 } from "lucide-react";
 import { mockCBDCs } from "./mockData";
 
+const vaultAddress    = process.env.NEXT_PUBLIC_VAULT_CONTRACT_ADDRESS;
 const CNY_CBDC = process.env.NEXT_PUBLIC_CBDC_CNY_ADDRESS;
 const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
@@ -38,28 +40,40 @@ export default function CBDCPools() {
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+
       const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
       const contract_INR = new ethers.Contract(INR_CBDC, INR_CBDC_ABI, signer);
       const contract_RUB = new ethers.Contract(RUB_CBDC, RUB_CBDC_ABI, signer);
       const contract_BRICS = new ethers.Contract(BRICS, BRICS_ABI, signer);
 
+
       //CNY
-      const rawBalance = await contract_CNY.balanceOf(accountData?.address);
+      const rawBalance = await vaultContract.getUserDeposit(
+          accountData?.address,
+          'CNY'
+      );
       const decimals = await contract_CNY.decimals();
       const formattedBalance = ethers.formatUnits(rawBalance, decimals);
 
       //INR
-      const rawBalanceINR = await contract_INR.balanceOf(accountData?.address);
+      const rawBalanceINR = await vaultContract.getUserDeposit(
+        accountData?.address,
+        'INR'
+      );
       const decimalsINR = await contract_INR.decimals();
       const formattedBalanceINR = ethers.formatUnits(rawBalanceINR, decimalsINR);
 
       //RUB
-      const rawBalanceRUB = await contract_RUB.balanceOf(accountData?.address);
+      const rawBalanceRUB = await vaultContract.getUserDeposit(
+        accountData?.address,
+        'RUB'
+      );
       const decimalsRUB = await contract_RUB.decimals();
       const formattedBalanceRUB = ethers.formatUnits(rawBalanceRUB, decimalsRUB);
 
-
-      //RUB
+      //BRICS
       const rawBalanceBRICS = await contract_BRICS.balanceOf(accountData?.address);
       const decimalsBRICS = await contract_BRICS.decimals();
       const formattedBalanceBRICS = ethers.formatUnits(rawBalanceBRICS, decimalsBRICS);
@@ -117,7 +131,7 @@ export default function CBDCPools() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">BRICS</h2>
+            <h2 className="text-xl font-semibold">WALLET</h2>
             <Building2 className="text-blue-600 w-6 h-6" />
         </div>
         <div className="space-y-3">
@@ -140,7 +154,7 @@ export default function CBDCPools() {
      <div className="flex items-center justify-between mb-4"></div>
      </div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">CBDC Vault</h2>
+        <h2 className="text-xl font-semibold">CBDC Vault by user</h2>
         <Building2 className="text-blue-600 w-6 h-6" />
       </div>
       {error && <div className="text-red-600 mb-4">{error}</div>}

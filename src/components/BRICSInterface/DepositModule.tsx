@@ -43,7 +43,7 @@ const currencyWeights = {
 };
 
 const collateralRatio = 150; // Collateralization Ratio in percentage
-
+const FEE_RATE = 1;  // 0.01% (1/10000)
 
 
 export default function ExchangeModule() {
@@ -51,12 +51,9 @@ export default function ExchangeModule() {
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [amount, setAmount] = useState("");
     const [estimatedBRICS, setEstimatedBRICS] = useState(0);
-    const [estimatedWeightBRICS, setEstimatedWeightBRICS] = useState(0);
 
     // คำนวณอัตราแลกเปลี่ยน
     const exchangeRate = exchangeRates[fromCurrency] || 1;
-    const weightRate = currencyWeights[fromCurrency] || 1;
-
 
      // Calculate collateralRatio
     const calculateCR = () => {
@@ -72,23 +69,11 @@ export default function ExchangeModule() {
     const calculateEstimatebricsMinted = () => {
         if (!amount) return 0;
 
-        const collateralValueCNY = Number(amount) * exchangeRate;
-       
-        //const weightedValue = (collateralValueCNY * weightRate) / 100;
-        //const bricsMinted = (weightedValue * 100) / (collateralValueCNY * collateralRatio / 100);
-        const bricsMinted = collateralValueCNY / (collateralRatio / 100);
-        
-        return bricsMinted;
-    }
-
-    // Calculate Estimate BRICS mint.
-    const calculateEstimateWeightbricsMinted = () => {
-        if (!amount) return 0;
-
-        const collateralValueCNY = Number(amount) * exchangeRate;
-       
-        const weightedValue = (collateralValueCNY * weightRate) / 100;
-        const bricsMinted = (weightedValue * 100) / (collateralValueCNY * collateralRatio / 100);
+        // 20241226
+        const valueCNY = Number(amount) * exchangeRate;
+        //const bricsMinted = collateralValueCNY / (collateralRatio / 100);
+        const fee = (valueCNY * FEE_RATE) / 10000;
+        const bricsMinted = valueCNY - fee;
         
         return bricsMinted;
     }
@@ -96,14 +81,12 @@ export default function ExchangeModule() {
     // อัปเดตค่า estimatedBRICS ทุกครั้งที่ amount หรือ fromCurrency เปลี่ยน
     useEffect(() => {
         const newEstimatedBRICS = calculateEstimatebricsMinted();
-        const estimatedWeightBRICS = calculateEstimateWeightbricsMinted();
         setEstimatedBRICS(newEstimatedBRICS);
     }, [amount, fromCurrency]);
 
 
     const estimatedCR = calculateCR();
     const estimatebricsMinted = calculateEstimatebricsMinted();
-    const estimatedWeightBRICSMinted = calculateEstimateWeightbricsMinted();
 
 
     const handleDeposit = async () => {
@@ -160,7 +143,6 @@ export default function ExchangeModule() {
                 // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
                 const approveTx = await contract_INR.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
-
             }
 
             // เรียก Deposit บน Vault (Smart Contract Deposit function)
@@ -249,17 +231,12 @@ export default function ExchangeModule() {
                 1 {currencies.find((c) => c.id === fromCurrency)?.label} ={" "}
                 {exchangeRate.toFixed(2)} BRICS
                 </div>
-                <div className="text-sm text-gray-600 mt-2">Estimated Collateralization Ratio</div>
+                <div className="text-sm text-gray-600 mt-2">Deposit Fee</div>
                 <div className="font-semibold">
-                    {estimatedCR.toFixed(2)}%
-                </div>
-                <div className="text-sm text-gray-600 mt-2">Weight</div>
-                <div className="font-semibold ">
-                 {Object.entries(currencyWeights).map(([currency, weight]) => (
-                    <div key={currency} className="flex justify-between">
-                        <span className="capitalize font-semibold">{currency.toUpperCase()} {weight}%</span>
-                    </div>
-                    ))}
+                    {new Intl.NumberFormat('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(estimatebricsMinted/10000)} %
                 </div>
                 <div className="text-sm text-gray-600 mt-2">Estimated BRICS minted</div>
                 <div className="font-semibold">
@@ -267,13 +244,6 @@ export default function ExchangeModule() {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     }).format(estimatebricsMinted)} BRICS
-                </div>
-                <div className="text-sm text-gray-600 mt-2">Estimated(Weight) BRICS minted</div>
-                <div className="font-semibold">
-                    {new Intl.NumberFormat('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(estimatedWeightBRICSMinted)} BRICS
                 </div>
             </div>
             )}

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useWallet, WalletProvider } from "@/components/WalletContext"; // Import Wallet context
 import Header from "@/components/BRICSInterface/Header";
 import VaultStatus from "@/components/BRICSInterface/VaultStatus";
+
+
 import CBDCPools from "@/components/BRICSInterface/CBDCPools";
 import ExchangeModule from "@/components/BRICSInterface/ExchangeModule";
 import Analytics from "@/components/BRICSInterface/Analytics";
@@ -11,7 +13,8 @@ import RiskManagement from "@/components/BRICSInterface/RiskManagement";
 
 import CBDCVault from "@/components/BRICSInterface/CBDCVault";
 import DepositModule from "@/components/BRICSInterface/DepositModule";
-
+import RedeemModule from "@/components/BRICSInterface/RedeemModule";
+import WithdrawModule from "@/components/BRICSInterface/WithdrawModule";
 
 function ConnectWalletSection() {
   const { accountData, connectToWallet } = useWallet();
@@ -61,6 +64,8 @@ export default function Home() {
           <VaultStatus />
           <CBDCVault />
           <DepositModule />
+          <RedeemModule />
+          <WithdrawModule />
 
           <CBDCPools />
           <ExchangeModule />

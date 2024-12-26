@@ -4,6 +4,10 @@ pragma solidity ^0.8.20;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC4626.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 
+interface IERC20Mintable is IERC20 {
+    function mint(address to, uint256 amount) external;
+}
+
 contract BRICSVaultV2 is ERC4626 {
     struct VaultInfo {
         IERC20 asset;
@@ -13,16 +17,23 @@ contract BRICSVaultV2 is ERC4626 {
     mapping(string => VaultInfo) public vaults;
     mapping(address => mapping(string => uint256)) public userDeposits; // Tracks deposits by user and token symbol
     mapping(string => uint256) public currencyWeights; // Weight of each currency in BRICS
-    address public adminAddress;
+    address public vaultWalletAddress;
     uint256 public collateralRatio = 150; // 150%
+    uint256 public constant FEE_RATE = 1; // 0.01% (1/10000)
+    // เก็บค่าธรรมเนียมใน Vault กลาง
+    mapping(string => uint256) public feeReserves;
 
-    address public constant CNY = 0x742142f1Dc4129fcBA7bE6bbBcd2680073C9C1E1;
-    address public constant RUB = 0xd2a5bC10698FD955D1Fe6cb468a17809A08fd005;
-    address public constant INR = 0x7EF2e0048f5bAeDe046f6BF797943daF4ED8CB47;
+    mapping(string => uint256) public totalDeposits;
+
+
+    //address public constant CNY = 0xd37BaD73F63e3725d364B65717d1c18e5186296f; use for real.
+    address public constant CNY = 0xe2899bddFD890e320e643044c6b95B9B0b84157A;
+    address public constant RUB = 0x9876EEAf962ADfc612486C5D54BCb9D8B5e50878; // Used on Test network.
+    address public constant INR = 0xe3077475D1219088cD002B75c8bB46567D7F37ae; // Used on Test network.
 
     // 0 
     constructor(IERC20 _asset) ERC4626(_asset) ERC20("BRICS", "vBRICS") {
-        adminAddress = msg.sender;
+        vaultWalletAddress = msg.sender;
 
         vaults["CNY"] = VaultInfo({
             asset: IERC20(CNY), 
@@ -41,9 +52,9 @@ contract BRICSVaultV2 is ERC4626 {
 
         vaults["BRICS"] = VaultInfo({
             asset: IERC20(_asset), 
-            exchangeRate: 1  // 1 BRICS = 1 CNY
+            exchangeRate: 1  
         });
-
+        
 
         currencyWeights["CNY"] = 20;
         currencyWeights["RUB"] = 50;
@@ -57,7 +68,7 @@ contract BRICSVaultV2 is ERC4626 {
     vault.addTokenVault("INR", INR_ERC20_Address, 12);   // 1 INR = 0.012 CNY
     */
     function addTokenVault(string memory symbol, IERC20 _asset, uint256 _exchangeRate) external {
-        require(msg.sender == adminAddress, "Only admin can add token");
+        require(msg.sender == vaultWalletAddress, "Only admin can add token");
         require(address(vaults[symbol].asset) == address(0), "Token already added");
         require(_exchangeRate > 0, "Exchange rate must be greater than 0");
 
@@ -77,14 +88,19 @@ contract BRICSVaultV2 is ERC4626 {
    
     // 1.1 Set the exchange rate for a specific token
     function setExchangeRate(string memory symbol, uint256 rate) external {
-        require(msg.sender == adminAddress, "Only admin can set exchange rate");
+        require(msg.sender == vaultWalletAddress, "Only admin can set exchange rate");
         require(rate > 0, "Rate must be greater than 0");
         require(address(vaults[symbol].asset) != address(0), "Token not supported");
 
         vaults[symbol].exchangeRate = rate; // 0.069
     }
 
+    function getExchangeRate(string memory symbol) external view returns (uint256) {
+        require(address(vaults[symbol].asset) != address(0), "Currency not supported");
+        return vaults[symbol].exchangeRate;
+    }
 
+   
     // 1.1
     /*
         uint256;
@@ -96,7 +112,7 @@ contract BRICSVaultV2 is ERC4626 {
         [20,50,30]
     */
     function setupCurrencyWeights(string[] memory symbols, uint256[] memory weights) external {
-        require(msg.sender == adminAddress, "Only admin can setup weights");
+        require(msg.sender == vaultWalletAddress, "Only admin can setup weights");
         require(symbols.length == 3, "Must provide exactly 3 currencies");
         require(weights.length == 3, "Must provide exactly 3 weights");
 
@@ -129,82 +145,48 @@ contract BRICSVaultV2 is ERC4626 {
         inrWeight = currencyWeights["INR"];
     }
 
-
-
     // 3.     Deposit collateral and mint BRICS tokens
     /*
-    function depositCollateral(string[] memory symbols, uint256[] memory amounts) public {
-        require(symbols.length == amounts.length, "Mismatched symbols and amounts");
-
-        uint256 totalWeightedCNYValue = 0;
-
-        for (uint256 i = 0; i < symbols.length; i++) {
-            string memory symbol = symbols[i];
-            uint256 amount = amounts[i];
-
-            require(address(vaults[symbol].asset) != address(0), "Unsupported token");
-            require(vaults[symbol].exchangeRate > 0, "Invalid exchange rate");
-            require(currencyWeights[symbol] > 0, "Weight not set for token");
-
-            // Transfer collateral to the contract
-            vaults[symbol].asset.transferFrom(msg.sender, address(this), amount);
-
-            // Calculate the value in CNY and apply the weight
-            uint256 cnyValue = (amount * vaults[symbol].exchangeRate) / 1000;
-            uint256 weightedValue = (cnyValue * currencyWeights[symbol]) / 100;
-            totalWeightedCNYValue += weightedValue;
-        }
-
-        // Calculate BRICS tokens to mint
-        uint256 value_BRICS_in_CNY = calculateBRICSValueInCNY();
-        uint256 bricsToMint = (totalWeightedCNYValue * 100) / (value_BRICS_in_CNY * collateralRatio / 100);
-        require(bricsToMint > 0, "Not enough collateral to mint BRICS");
-
-        // Mint BRICS tokens
-        _mint(msg.sender, bricsToMint);
-    }
-    */
-
-    /*
-
+    20241226 used.
     */
     function depositCollateral(string memory symbol, uint256 amount) public {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
         require(vaults[symbol].exchangeRate > 0, "Invalid exchange rate");
         require(currencyWeights[symbol] > 0, "Weight not set for token");
 
-
         // ตรวจสอบการอนุมัติ
         uint256 allowance = vaults[symbol].asset.allowance(msg.sender, address(this));
         require(allowance >= amount, "Insufficient allowance, approve first");
 
-        // โอนโทเค็นมาที่ Vault
+        // Transfer collateral to the contract
         vaults[symbol].asset.transferFrom(msg.sender, address(this), amount);
 
-         // อัปเดตการฝากของผู้ใช้
+        // Update user deposits
         userDeposits[msg.sender][symbol] += amount;
 
-          // คำนวณมูลค่าใน CNY และปรับค่าน้ำหนัก
-        uint256 cnyValue = (amount * vaults[symbol].exchangeRate) / 1000;
-        uint256 weightedValue = (cnyValue * currencyWeights[symbol]) / 100;
+        // อัปเดตยอดรวมของโทเค็นที่ถูกฝาก
+        totalDeposits[symbol] += amount;
 
-           // คำนวณจำนวน BRICS ที่จะสร้าง
-        uint256 value_BRICS_in_CNY = calculateBRICSValueInCNY();
-        uint256 bricsToMint = (weightedValue * 100) / (value_BRICS_in_CNY * collateralRatio / 100);
+        // Calculate the value in CNY and apply the weight
+        uint256 cnyValue = (amount * vaults[symbol].exchangeRate) / 1000;
+
+        // คำนวณค่าธรรมเนียม 0.01%
+        uint256 fee = (cnyValue * FEE_RATE) / 10000;
+
+        // Apply the collateral ratio to determine the BRICS to mint
+        uint256 bricsToMint = cnyValue  - fee;
         require(bricsToMint > 0, "Not enough collateral to mint BRICS");
 
+        // เก็บค่าธรรมเนียมไว้ใน Vault กลาง
+        feeReserves[symbol] += fee;
         // Mint BRICS tokens
+        //_mint(msg.sender, bricsToMint);
 
-        คุณพูดถูก! _mint ที่มาจาก ERC4626 หรือ ERC20 ในสัญญานี้จะสร้างโทเค็น vBRICS ซึ่งเป็นโทเค็น ERC4626 (Vault Token) ไม่ใช่โทเค็น BRICS (Stablecoin) ที่ต้องการ
-        ดังนั้น เราจำเป็นต้องใช้การโต้ตอบกับ vaults["BRICS"].asset เพื่อจัดการการสร้างโทเค็น BRICS แทน
-        
-        _mint(msg.sender, bricsToMint);
-       
-        // เรียก mint จากโทเค็น BRICS
+        // Mint BRICS ให้ผู้ใช้ (หลังหักค่าธรรมเนียม)
         IERC20Mintable(address(vaults["BRICS"].asset)).mint(msg.sender, bricsToMint);
 
-        // สร้างโทเค็น BRICS และมอบให้ผู้ใช้
-        //vaults["BRICS"].asset.transfer(msg.sender, bricsToMint);
+        // Mint ค่าธรรมเนียม BRICS ให้เจ้าของสัญญา
+        IERC20Mintable(address(vaults["BRICS"].asset)).mint(vaultWalletAddress, fee);
     }
 
     function previewDeposit(string memory symbol, uint256 amount) public view returns (uint256 bricsToMint) {
@@ -214,16 +196,18 @@ contract BRICSVaultV2 is ERC4626 {
 
         // Calculate the value in CNY and apply the weight
         uint256 cnyValue = (amount * vaults[symbol].exchangeRate) / 1000;
-        uint256 weightedValue = (cnyValue * currencyWeights[symbol]) / 100;
 
-        // Calculate BRICS tokens to mint
-        uint256 value_BRICS_in_CNY = calculateBRICSValueInCNY();
-        bricsToMint = (weightedValue * 100) / (value_BRICS_in_CNY * collateralRatio / 100);
+        bricsToMint = cnyValue;
     }
 
-    // View user-specific deposits
+    // View user-specific deposits.  20241226 used.
     function getUserDeposit(address user, string memory symbol) public view returns (uint256) {
         return userDeposits[user][symbol];
+    }
+
+    function getTotalDeposits(string memory symbol) public view returns (uint256) {
+        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
+        return totalDeposits[symbol];
     }
 
 
@@ -271,6 +255,8 @@ contract BRICSVaultV2 is ERC4626 {
         _burn(msg.sender, bricsAmount);
     }
     */
+
+    
 
     // Redeem BRICS tokens for a specific collateral
     function redeem(uint256 bricsAmount, string memory symbol) public {
