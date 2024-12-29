@@ -10,11 +10,13 @@ import ExchangeModule from "@/components/BRICSInterface/ExchangeModule";
 import Analytics from "@/components/BRICSInterface/Analytics";
 import RiskManagement from "@/components/BRICSInterface/RiskManagement";
 
-
 import CBDCVault from "@/components/BRICSInterface/CBDCVault";
 import DepositModule from "@/components/BRICSInterface/DepositModule";
 import RedeemModule from "@/components/BRICSInterface/RedeemModule";
-import WithdrawModule from "@/components/BRICSInterface/WithdrawModule";
+
+import PoolDepositModule from "@/components/BRICSInterface/PoolDepositModule";
+import PoolSWAPModule from "@/components/BRICSInterface/PoolSWAPModule";
+import PoolWithdrawModule from "@/components/BRICSInterface/PoolWithdrawModule";
 
 function ConnectWalletSection() {
   const { accountData, connectToWallet } = useWallet();
@@ -62,15 +64,22 @@ export default function Home() {
         <Header />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <VaultStatus />
+
+
           <CBDCVault />
           <DepositModule />
           <RedeemModule />
-          <WithdrawModule />
 
-          <CBDCPools />
-          <ExchangeModule />
+          
+          <PoolDepositModule />
+          <PoolSWAPModule />
+          <PoolWithdrawModule />
+
+
           <Analytics />
           <RiskManagement />
+
+
         </div>
       </div>
     </WalletProvider>

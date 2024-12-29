@@ -18,8 +18,8 @@ const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
 
 const currencies = [
   { id: "cny", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
-  { id: "rub", name: "RUB_CBDC", label: "Digital Ruble", address:INR_CBDC },
-  { id: "inr", name: "INR_CBDC", label: "Digital Rupee", address:RUB_CBDC },
+  { id: "rub", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
+  { id: "inr", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
   //{ id: "brl", name: "Digital Real", label: "Digital Real" },
   //{ id: "zar", name: "Digital Rand", label: "Digital Rand" },
   //{ id: "brs", name: "BRICS", label: "BRICS Stablecoin" }
@@ -70,10 +70,8 @@ export default function ExchangeModule() {
         if (!amount) return 0;
 
         // 20241226
-        const valueCNY = Number(amount) * exchangeRate;
-        //const bricsMinted = collateralValueCNY / (collateralRatio / 100);
-        const fee = (valueCNY * FEE_RATE) / 10000;
-        const bricsMinted = valueCNY - fee;
+        const collateralValueCNY = Number(amount) * exchangeRate;
+        const bricsMinted = collateralValueCNY / (collateralRatio / 100);
         
         return bricsMinted;
     }
@@ -144,6 +142,9 @@ export default function ExchangeModule() {
                 const approveTx = await contract_INR.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
+            
+             // ยังไม่มี dialog wating (Loading) *********************
+
 
             // เรียก Deposit บน Vault (Smart Contract Deposit function)
             const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
@@ -231,13 +232,7 @@ export default function ExchangeModule() {
                 1 {currencies.find((c) => c.id === fromCurrency)?.label} ={" "}
                 {exchangeRate.toFixed(2)} BRICS
                 </div>
-                <div className="text-sm text-gray-600 mt-2">Deposit Fee</div>
-                <div className="font-semibold">
-                    {new Intl.NumberFormat('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(estimatebricsMinted/10000)} %
-                </div>
+                
                 <div className="text-sm text-gray-600 mt-2">Estimated BRICS minted</div>
                 <div className="font-semibold">
                     {new Intl.NumberFormat('en-US', {
