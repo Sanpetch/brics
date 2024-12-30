@@ -6,9 +6,16 @@ import { ethers } from "ethers";
 
 import { Wallet } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import Vault_ABI from "@/components/ABI/Vault.json";
 
-const vaultAddress    = process.env.NEXT_PUBLIC_VAULT_CONTRACT_ADDRESS;
+
+import CNY_CBDC_ABI from "@/components/ABI/CNY_CBDC_Token.json";
+import INR_CBDC_ABI from "@/components/ABI/INR_CBDC_Token.json";
+import RUB_CBDC_ABI from "@/components/ABI/RUB_CBDC_Token.json";
+import BRICS_ABI from "@/components/ABI/BRICS_Token.json";
+import POOL_ABI from "@/components/ABI/POOL.json";
+
+const poolAddress    = process.env.NEXT_PUBLIC_POOL_ADDRESS;
+
 const CNY_CBDC = process.env.NEXT_PUBLIC_CBDC_CNY_ADDRESS;
 const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
