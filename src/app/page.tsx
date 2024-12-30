@@ -14,6 +14,7 @@ import CBDCVault from "@/components/BRICSInterface/CBDCVault";
 import DepositModule from "@/components/BRICSInterface/DepositModule";
 import RedeemModule from "@/components/BRICSInterface/RedeemModule";
 
+import PoolModule from "@/components/BRICSInterface/PoolModule";
 import PoolDepositModule from "@/components/BRICSInterface/PoolDepositModule";
 import PoolSWAPModule from "@/components/BRICSInterface/PoolSWAPModule";
 import PoolWithdrawModule from "@/components/BRICSInterface/PoolWithdrawModule";
@@ -70,7 +71,7 @@ export default function Home() {
           <DepositModule />
           <RedeemModule />
 
-          
+          <PoolModule />
           <PoolDepositModule />
           <PoolSWAPModule />
           <PoolWithdrawModule />
