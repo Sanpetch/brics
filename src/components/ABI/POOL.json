@@ -2,102 +2,18 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "token0Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "token1Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount0Desired",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount1Desired",
-				"type": "uint256"
-			}
-		],
-		"name": "addLiquidity",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amount0",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount1",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "liquidity",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "token0Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "token1Symbol",
-				"type": "string"
-			}
-		],
-		"name": "createPool",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "address",
-				"name": "initialOwner",
+				"name": "_tokenRegistry",
 				"type": "address"
 			},
 			{
 				"internalType": "address",
-				"name": "_tokenRegistry",
+				"name": "_feeManager",
 				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "OwnableInvalidOwner",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "OwnableUnauthorizedAccount",
-		"type": "error"
 	},
 	{
 		"anonymous": false,
@@ -196,19 +112,13 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newValue",
+				"type": "uint256"
 			}
 		],
-		"name": "OwnershipTransferred",
+		"name": "MinimumLiquidityUpdated",
 		"type": "event"
 	},
 	{
@@ -235,19 +145,6 @@
 		"inputs": [
 			{
 				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "ProtocolFeeCollected",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
 				"internalType": "string",
 				"name": "token0Symbol",
 				"type": "string"
@@ -267,155 +164,6 @@
 		],
 		"name": "RateUpdated",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "token0Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "token1Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "liquidity",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount0Min",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount1Min",
-				"type": "uint256"
-			}
-		],
-		"name": "removeLiquidity",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amount0",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount1",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_feeCollector",
-				"type": "address"
-			}
-		],
-		"name": "setFeeCollector",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "token0Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "token1Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "bool",
-				"name": "_isActive",
-				"type": "bool"
-			}
-		],
-		"name": "setPoolActive",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "token0Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "token1Symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "bool",
-				"name": "pauseToken0",
-				"type": "bool"
-			},
-			{
-				"internalType": "bool",
-				"name": "pauseToken1",
-				"type": "bool"
-			}
-		],
-		"name": "setTokenOutPause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "fromSymbol",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "toSymbol",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amountIn",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "minAmountOut",
-				"type": "uint256"
-			}
-		],
-		"name": "swap",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "amountOut",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -449,23 +197,29 @@
 		"type": "event"
 	},
 	{
-		"inputs": [
+		"inputs": [],
+		"name": "RATE_CHANGE_LIMIT",
+		"outputs": [
 			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
 		"inputs": [],
-		"name": "updateBricsRates",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "RATE_PRECISION",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -482,12 +236,33 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "newRate",
+				"name": "amount0Desired",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount1Desired",
 				"type": "uint256"
 			}
 		],
-		"name": "updateExchangeRate",
-		"outputs": [],
+		"name": "addLiquidity",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount0",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount1",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "liquidity",
+				"type": "uint256"
+			}
+		],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
@@ -508,6 +283,24 @@
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "token0Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "token1Symbol",
+				"type": "string"
+			}
+		],
+		"name": "createPool",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -536,23 +329,10 @@
 	},
 	{
 		"inputs": [],
-		"name": "FEE_DENOMINATOR",
+		"name": "feeManager",
 		"outputs": [
 			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "feeCollector",
-		"outputs": [
-			{
-				"internalType": "address",
+				"internalType": "contract FeeManager",
 				"name": "",
 				"type": "address"
 			}
@@ -755,38 +535,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "LP_FEE",
+		"name": "minimumLiquidity",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MINIMUM_LIQUIDITY",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -841,18 +595,15 @@
 				"internalType": "bool",
 				"name": "isActive",
 				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "PROTOCOL_FEE",
-		"outputs": [
+			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "token0Fee",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token1Fee",
 				"type": "uint256"
 			}
 		],
@@ -860,29 +611,145 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "RATE_CHANGE_LIMIT",
-		"outputs": [
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "token0Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "token1Symbol",
+				"type": "string"
+			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "liquidity",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount0Min",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount1Min",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"name": "removeLiquidity",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount0",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount1",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "RATE_PRECISION",
-		"outputs": [
+		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "_minimumLiquidity",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"name": "setMinimumLiquidity",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "token0Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "token1Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "_isActive",
+				"type": "bool"
+			}
+		],
+		"name": "setPoolActive",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "token0Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "token1Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "pauseToken0",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "pauseToken1",
+				"type": "bool"
+			}
+		],
+		"name": "setTokenOutPause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "fromSymbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "toSymbol",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "minAmountOut",
+				"type": "uint256"
+			}
+		],
+		"name": "swap",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -900,15 +767,32 @@
 	},
 	{
 		"inputs": [],
-		"name": "TOTAL_FEE",
-		"outputs": [
+		"name": "updateBricsRates",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "token0Symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "token1Symbol",
+				"type": "string"
+			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "newRate",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"name": "updateExchangeRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

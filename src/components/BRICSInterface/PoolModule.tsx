@@ -12,10 +12,12 @@ import RUB_CBDC_ABI from "@/components/ABI/RUB_CBDC_Token.json";
 import BRICS_ABI from "@/components/ABI/BRICS_Token.json";
 import Vault_ABI from "@/components/ABI/Vault.json";
 import POOL_TOKEN_ABI from "@/components/ABI/POOL_TokenRegis.json";
+import POOL_FEE_ABI from "@/components/ABI/POOL_FeeManager.json";
 import POOL_ABI from "@/components/ABI/POOL.json";
 
 const POOL_ADDR    = process.env.NEXT_PUBLIC_POOL_ADDRESS;
-const TOKENREGISTRY    = process.env.NEXT_PUBLIC_POOL_TOKENREGISTRY_ADDRESS;
+const POOL_TOKENREGISTRY    = process.env.NEXT_PUBLIC_POOL_TOKENREGISTRY_ADDRESS;
+const POOL_FEE    = process.env.NEXT_PUBLIC_POOL_FEE_ADDRESS;
 const CNY_CBDC = process.env.NEXT_PUBLIC_CBDC_CNY_ADDRESS;
 const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
@@ -77,13 +79,40 @@ export default function PoolModule() {
           const resolvedIsAvailable = isAvailable.slice(0, minLength);
       
           const poolsData = [];
-          for (let i = 0; i < minLength; i++) {
-            poolsData.push({
-              name: `${poolNames[i]}/${poolNames[i + 1]}`,
-              reserve0: ethers.formatUnits(resolvedReserves0[i].toString(), 2),
-              reserve1: ethers.formatUnits(resolvedReserves1[i].toString(), 2),
-              isAvailable: resolvedIsAvailable[i],
-            });
+          //  continue;
+          let name = "";
+          for (let i = 0; i < 6; i++) {
+            if(poolNames[i]== 'CNY' )
+            {
+              name = `${poolNames[i]}/${poolNames[1]}`;
+              poolsData.push({
+                name: name,
+                reserve0: ethers.formatUnits(resolvedReserves0[0].toString(), 2),
+                reserve1: ethers.formatUnits(resolvedReserves1[0].toString(), 2),
+                isAvailable: resolvedIsAvailable[0],
+              });
+            }
+            else if(poolNames[i]== 'RUB')
+            {
+              name = `${poolNames[i]}/${poolNames[3]}`;
+              poolsData.push({
+                name: name,
+                reserve0: ethers.formatUnits(resolvedReserves0[1].toString(), 2),
+                reserve1: ethers.formatUnits(resolvedReserves1[1].toString(), 2),
+                isAvailable: resolvedIsAvailable[1],
+              });
+            }
+            else if(poolNames[i]== 'INR')
+            {
+              name = `${poolNames[i]}/${poolNames[5]}`;
+              poolsData.push({
+                name: name,
+                reserve0: ethers.formatUnits(resolvedReserves0[2].toString(), 2),
+                reserve1: ethers.formatUnits(resolvedReserves1[2].toString(), 2),
+                isAvailable: resolvedIsAvailable[2],
+              });
+            }
+            
           }
       
           setPools(poolsData);

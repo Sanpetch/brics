@@ -3,23 +3,19 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./TokenRegistry.sol";
-import "hardhat/console.sol";
+import "./FeeManager.sol";
 
-contract BRICSPool is ReentrancyGuard, Ownable {
+
+contract BRICSPool is ReentrancyGuard {
     TokenRegistry public tokenRegistry;
-    address public feeCollector;
+    FeeManager public feeManager;
 
     mapping(address => mapping(address => uint256)) public exchangeRates; // Stores exchange rates between token pairs
     mapping(bytes32 => Pool) public pools;
 
-    uint256 public constant MINIMUM_LIQUIDITY = 1000; //Prevent devided by zero caused error
-    uint256 public constant PROTOCOL_FEE = 5; // 0.05%
-    uint256 public constant LP_FEE = 15; // 0.15%
-    uint256 public constant TOTAL_FEE = PROTOCOL_FEE + LP_FEE; // 0.2%
-    uint256 public constant FEE_DENOMINATOR = 10000;
-    uint256 public constant RATE_CHANGE_LIMIT = 5000; // 50% max rate change
+    uint256 public minimumLiquidity;
+    uint256 public constant RATE_CHANGE_LIMIT = 1000; // 10% max rate change
     uint256 public constant RATE_PRECISION = 1000; // 1000 = 1
 
     struct Pool {
@@ -27,11 +23,13 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         address token1;
         uint256 reserve0;
         uint256 reserve1;
-        uint256 totalSupply;
+        uint256 totalSupply; //LP
         mapping(address => uint256) balances; 
         bool token0OutPaused;
         bool token1OutPaused;
         bool isActive;
+        uint256 token0Fee;
+        uint256 token1Fee;
     }
 
     event LiquidityAdded(
@@ -60,17 +58,19 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         uint256 newRate
     );
 
-    event ProtocolFeeCollected(uint256 amount);
     event LPFeeDistributed(address LP, uint256 amount);
     event PoolCreated(string token0Symbol, string token1Symbol);
+    event MinimumLiquidityUpdated(uint256 newValue);
 
 
-    constructor(address initialOwner, address _tokenRegistry) Ownable(initialOwner) {
-        feeCollector = initialOwner;
+    constructor(address _tokenRegistry, address _feeManager) {
         tokenRegistry = TokenRegistry(_tokenRegistry);
+        feeManager = FeeManager(_feeManager);
+        minimumLiquidity = 1000;
         updateExchangeRate("CNY", "CNY", RATE_PRECISION); // 1.0 CNY base
         updateExchangeRate("RUB", "CNY", 69);  // 0.069 RUB/CNY
         updateExchangeRate("INR", "CNY", 86);  // 0.086 INR/CNY
+        updateBricsRates();
     
         createPool("CNY", "BRICS");
         createPool("RUB", "BRICS");
@@ -96,11 +96,6 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         _;
     }   
 
-    function setFeeCollector(address _feeCollector) external onlyOwner {
-        require(_feeCollector != address(0), "Invalid address");
-        feeCollector = _feeCollector;
-    }
-
 
     function getPoolKeybySymbol(string memory token0Symbol, string memory token1Symbol) public view returns (bytes32) {
         address token0 = tokenRegistry.getTokenAddress(token0Symbol);
@@ -111,10 +106,7 @@ contract BRICSPool is ReentrancyGuard, Ownable {
     }
 
 
-    function createPool(string memory token0Symbol, string memory token1Symbol)
-        public
-        onlyOwner
-    {
+    function createPool(string memory token0Symbol, string memory token1Symbol) public {
         address token0 = tokenRegistry.getTokenAddress(token0Symbol);
         address token1 = tokenRegistry.getTokenAddress(token1Symbol);
         require(token0 != address(0) && token1 != address(0), "Invalid token symbol");
@@ -163,8 +155,8 @@ contract BRICSPool is ReentrancyGuard, Ownable {
                     poolNames[currentIndex * 2 + 1] = supportedTokens[j];
                     reserves0[currentIndex] = pool.reserve0;
                     reserves1[currentIndex] = pool.reserve1;
-                    isAvailable[currentIndex] = pool.reserve0 > MINIMUM_LIQUIDITY && 
-                                            pool.reserve1 > MINIMUM_LIQUIDITY;
+                    isAvailable[currentIndex] = pool.reserve0 >  minimumLiquidity && 
+                                            pool.reserve1 >  minimumLiquidity;
                     currentIndex++;
                 }
             }
@@ -191,12 +183,12 @@ contract BRICSPool is ReentrancyGuard, Ownable {
 
         reserve0 = pool.reserve0;
         reserve1 = pool.reserve1;
-        totalLiquidity = pool.totalSupply;
+        totalLiquidity = pool.totalSupply - minimumLiquidity;
         rateT0ToT1 = exchangeRates[token0][token1];
         rateT1ToT0 = exchangeRates[token1][token0];
         
-        isHealthy = reserve0 > MINIMUM_LIQUIDITY && 
-                    reserve1 > MINIMUM_LIQUIDITY && 
+        isHealthy = reserve0 >  minimumLiquidity && 
+                    reserve1 >  minimumLiquidity && 
                     rateT0ToT1 > 0 && rateT1ToT0 > 0;
     }
 
@@ -204,7 +196,7 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         string memory token0Symbol,
         string memory token1Symbol,
         bool _isActive
-        ) external onlyOwner {
+        ) external {
         bytes32 poolKey = getPoolKeybySymbol(token0Symbol, token1Symbol);
         pools[poolKey].isActive = _isActive;
         }
@@ -214,7 +206,7 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         string memory token1Symbol,
         bool pauseToken0,
         bool pauseToken1
-    ) external onlyOwner {
+    ) external {
         bytes32 poolKey = getPoolKeybySymbol(token0Symbol, token1Symbol);
         pools[poolKey].token0OutPaused = pauseToken0;
         pools[poolKey].token1OutPaused = pauseToken1;
@@ -230,20 +222,27 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         Pool storage pool = pools[poolKey];
         address BRICS = tokenRegistry.getTokenAddress("BRICS");
 
+        uint256 depositFee;
+        if (pool.reserve0 <= minimumLiquidity * 3 || pool.reserve1 <= minimumLiquidity * 3) {
+            depositFee = feeManager.getProtocolFee(feeManager.lowDepositFee());
+        } else {
+            depositFee = feeManager.getProtocolFee(feeManager.depositFee());
+        }
+
         if (pool.totalSupply == 0) {
             amount0 = amount0Desired;
             amount1 = amount1Desired;
-            liquidity = sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
-            pool.totalSupply = MINIMUM_LIQUIDITY;
+            liquidity = feeManager.sqrt(amount0 * amount1) -  minimumLiquidity;
+            pool.totalSupply =  minimumLiquidity;
         } else {
             amount0 = amount0Desired;
             amount1 = (amount0 * pool.reserve1) / pool.reserve0;
             require(amount1 <= amount1Desired, "Excessive amount1");
-            liquidity = min((amount0 * pool.totalSupply) / pool.reserve0, (amount1 * pool.totalSupply) / pool.reserve1);
+            liquidity = feeManager.min((amount0 * pool.totalSupply) / pool.reserve0, (amount1 * pool.totalSupply) / pool.reserve1);
         }
 
-        uint256 protocolFeeBrics = (getExchangeRate(token0Symbol, "BRICS") * PROTOCOL_FEE) / FEE_DENOMINATOR;
-        require(IERC20(BRICS).transferFrom(msg.sender, feeCollector, protocolFeeBrics), "Protocol fee failed");
+        uint256 depositFeeBrics = (getExchangeRate(token0Symbol, "BRICS") * depositFee) / RATE_PRECISION;
+        require(IERC20(BRICS).transferFrom(msg.sender, feeManager.feeCollector(), depositFeeBrics), "Protocol fee failed");
 
         address token0 = tokenRegistry.getTokenAddress(token0Symbol);
         address token1 = tokenRegistry.getTokenAddress(token1Symbol);
@@ -257,7 +256,23 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         pool.balances[msg.sender] += liquidity;
 
         emit LiquidityAdded(token0Symbol, token1Symbol, amount0, amount1, liquidity);
-        }
+    }
+
+    function _calculateWithdrawAmounts(
+            Pool storage pool,
+            uint256 liquidity
+        ) internal view returns (uint256 amount0, uint256 amount1) {
+            amount0 = (liquidity * pool.reserve0) / pool.totalSupply;
+            amount1 = (liquidity * pool.reserve1) / pool.totalSupply;
+    }
+
+    function _handleWithdrawFee(
+            string memory token0Symbol
+        ) internal view returns (uint256) {
+            uint256 withdrawFee = feeManager.getProtocolFee(feeManager.baseFee());
+            return (getExchangeRate(token0Symbol, "BRICS") * withdrawFee) / RATE_PRECISION;
+    }
+
 
     function removeLiquidity(
         string memory token0Symbol,
@@ -268,16 +283,15 @@ contract BRICSPool is ReentrancyGuard, Ownable {
     ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
         bytes32 poolKey = getPoolKeybySymbol(token0Symbol, token1Symbol);
         Pool storage pool = pools[poolKey];
+        require(pool.isActive, "Pool not active");
+        address BRICS = tokenRegistry.getTokenAddress("BRICS");
+        require(pool.balances[msg.sender] >= liquidity, "Insufficient liquidity");
 
-        require(
-            pool.balances[msg.sender] >= liquidity,
-            "Insufficient liquidity"
-        );
+        (amount0, amount1) = _calculateWithdrawAmounts(pool, liquidity);
+        require(amount0 >= amount0Min && amount1 >= amount1Min, "Insufficient amount");
 
-        amount0 = (liquidity * pool.reserve0) / pool.totalSupply;
-        amount1 = (liquidity * pool.reserve1) / pool.totalSupply;
-        require(amount0 >= amount0Min, "Insufficient amount0");
-        require(amount1 >= amount1Min, "Insufficient amount1");
+        uint256 withdrawFeeBrics = _handleWithdrawFee(token0Symbol);
+        require(IERC20(BRICS).transferFrom(msg.sender, feeManager.feeCollector(), withdrawFeeBrics));
 
         pool.balances[msg.sender] -= liquidity;
         pool.totalSupply -= liquidity;
@@ -305,36 +319,35 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         );
     }
 
-
-    function swap(
-        string memory fromSymbol,
-        string memory toSymbol,
-        uint256 amountIn,
-        uint256 minAmountOut
-    ) external nonReentrant returns (uint256 amountOut) {
-        bytes32 poolKey = getPoolKeybySymbol(fromSymbol, toSymbol);
-        Pool storage pool = pools[poolKey];
-        address fromToken = tokenRegistry.getTokenAddress(fromSymbol);
-        
-        bool isToken0 = fromToken == pool.token0;
-        amountOut = isToken0 
-            ? (amountIn * pool.reserve1) / pool.reserve0 
+    function _calculateSwapAmounts(
+        Pool storage pool,
+        bool isToken0,
+        uint256 amountIn
+        ) internal view returns (uint256) {
+        return isToken0 
+            ? (amountIn * pool.reserve1) / pool.reserve0
             : (amountIn * pool.reserve0) / pool.reserve1;
-        
-        uint256 feeBrics = (getExchangeRate(fromSymbol, "BRICS") * TOTAL_FEE) / FEE_DENOMINATOR;
-        uint256 protocolFeeBrics = (feeBrics * PROTOCOL_FEE) / TOTAL_FEE;
-        require(amountOut >= minAmountOut, "Output below minimum");
-        
-        address BRICS = tokenRegistry.getTokenAddress("BRICS");
-        address toToken = tokenRegistry.getTokenAddress(toSymbol);
+        }
 
-        require(IERC20(fromToken).transferFrom(msg.sender, address(this), amountIn), "TransferFrom failed");
-        require(IERC20(toToken).transfer(msg.sender, amountOut), "Transfer failed");
-        require(IERC20(BRICS).transfer(feeCollector, protocolFeeBrics), "Protocol fee failed");
-        require(IERC20(BRICS).transfer(msg.sender, feeBrics - protocolFeeBrics), "LP fee failed");
-        
-        emit LPFeeDistributed(msg.sender, feeBrics - protocolFeeBrics);
+    function _handleSwapFees(
+        Pool storage pool,
+        bool isToken0,
+        string memory fromSymbol
+        ) internal view returns (uint256, uint256) {
+        return feeManager.calculateSwapFees(
+            pool.reserve0,
+            pool.reserve1,
+            isToken0,
+            getExchangeRate(fromSymbol, "BRICS")
+        );
+    }
 
+    function _updateReserves(
+        Pool storage pool,
+        bool isToken0,
+        uint256 amountIn,
+        uint256 amountOut
+        ) internal {
         if (isToken0) {
             pool.reserve0 += amountIn;
             pool.reserve1 -= amountOut;
@@ -342,7 +355,36 @@ contract BRICSPool is ReentrancyGuard, Ownable {
             pool.reserve1 += amountIn;
             pool.reserve0 -= amountOut;
         }
+    }
 
+    function swap(string memory fromSymbol,
+                string memory toSymbol,
+                uint256 amountIn,
+                uint256 minAmountOut
+                ) public nonReentrant returns (uint256 amountOut) {
+        bytes32 poolKey = getPoolKeybySymbol(fromSymbol, toSymbol);
+        Pool storage pool = pools[poolKey];
+        require(pool.isActive, "Pool not active");
+        
+        bool isToken0 = tokenRegistry.getTokenAddress(fromSymbol) == pool.token0;
+        amountOut = _calculateSwapAmounts(pool, isToken0, amountIn);
+        require(amountOut >= minAmountOut, "Output below minimum");
+        
+        (uint256 feeBrics, uint256 protocolFeeBrics) = _handleSwapFees(pool, isToken0, fromSymbol);
+        
+        // Handle transfers
+        address fromToken = tokenRegistry.getTokenAddress(fromSymbol);
+        address toToken = tokenRegistry.getTokenAddress(toSymbol);
+        address BRICS = tokenRegistry.getTokenAddress("BRICS");
+        
+        require(IERC20(fromToken).transferFrom(msg.sender, address(this), amountIn));
+        require(IERC20(toToken).transfer(msg.sender, amountOut));
+        require(IERC20(BRICS).transfer(feeManager.feeCollector(), protocolFeeBrics));
+        require(IERC20(BRICS).transfer(msg.sender, feeBrics - protocolFeeBrics));
+        
+        _updateReserves(pool, isToken0, amountIn, amountOut);
+        
+        emit LPFeeDistributed(msg.sender, feeBrics - protocolFeeBrics);
         emit Swapped(fromSymbol, toSymbol, amountIn, amountOut);
     }
 
@@ -351,15 +393,11 @@ contract BRICSPool is ReentrancyGuard, Ownable {
     function getUserLiquidity(
         string memory token0Symbol,
         string memory token1Symbol
-    )
-        public
-        view
-        returns (
+    ) public view returns (
             uint256 liquidityTokens,
             uint256 token0Amount,
             uint256 token1Amount
-        )
-    {
+    ){
         bytes32 poolKey = getPoolKeybySymbol(token0Symbol, token1Symbol);
         Pool storage pool = pools[poolKey];
 
@@ -373,22 +411,26 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         string memory toSymbol,
         uint256 amountIn
     ) external view returns (uint256 amountOut, uint256 bricsFee) {
-        address fromToken = tokenRegistry.getTokenAddress(fromSymbol);
-        address toToken = tokenRegistry.getTokenAddress(toSymbol);
-        address bricsAddr = tokenRegistry.getTokenAddress("BRICS");
-
-        uint256 rate = exchangeRates[fromToken][toToken];
-        amountOut = (amountIn * rate) / RATE_PRECISION;
+        bytes32 poolKey = getPoolKeybySymbol(fromSymbol, toSymbol);
+        Pool storage pool = pools[poolKey];
+        require(pool.isActive, "Pool not active");
         
-        // Calculate fee in BRICS
-        if(toToken == bricsAddr) {
-            bricsFee = (amountOut * TOTAL_FEE) / FEE_DENOMINATOR;
-        } else {
-            // For other tokens, calculate equivalent BRICS value of output
-            uint256 rateToBrics = exchangeRates[toToken][bricsAddr];
-            uint256 bricsEquivalent = (amountOut * rateToBrics) / RATE_PRECISION;
-            bricsFee = (bricsEquivalent * TOTAL_FEE) / FEE_DENOMINATOR;
-        }
+        address fromToken = tokenRegistry.getTokenAddress(fromSymbol);
+        bool isToken0 = fromToken == pool.token0;
+
+        // Get dynamic fee based on reserves
+        uint256 fee = isToken0
+            ? (pool.reserve0 <= minimumLiquidity * 3 ? feeManager.lowFee() : feeManager.baseFee())
+            : (pool.reserve1 <= minimumLiquidity * 3 ? feeManager.lowFee() : feeManager.baseFee());
+
+        // Calculate BRICS fee
+        bricsFee = (getExchangeRate(fromSymbol, "BRICS") * fee) / RATE_PRECISION;
+
+        // Calculate output after fee deduction
+        uint256 amountAfterFee = amountIn - bricsFee;
+        amountOut = isToken0
+            ? (amountAfterFee * pool.reserve1) / pool.reserve0
+            : (amountAfterFee * pool.reserve0) / pool.reserve1;
 
         return (amountOut, bricsFee);
     }
@@ -397,7 +439,7 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         string memory token0Symbol,
         string memory token1Symbol,
         uint256 newRate
-    ) public onlyOwner {
+    ) public {
         address token0 = tokenRegistry.getTokenAddress(token0Symbol);
         address token1 = tokenRegistry.getTokenAddress(token1Symbol);
 
@@ -436,7 +478,6 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         return (RATE_PRECISION * RATE_PRECISION) / reverseRate;
     }
 
-
     function calculateBricsValue(uint256 amount) public view returns (uint256) {
         string memory baseCurrency = "CNY";  // Base currency for rate comparison
         uint256 bricsValue;
@@ -457,7 +498,7 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         return bricsValue / tokenRegistry.WEIGHT_PRECISION();
     }
 
-    function updateBricsRates() external onlyOwner {
+    function updateBricsRates() public  {
         address bricsAddr = tokenRegistry.getTokenAddress("BRICS");
         address cnyAddr = tokenRegistry.getTokenAddress("CNY");
         
@@ -484,21 +525,10 @@ contract BRICSPool is ReentrancyGuard, Ownable {
         }
     }
 
-
-    function sqrt(uint256 y) internal pure returns (uint256 z) {
-        if (y > 3) {
-            z = y;
-            uint256 x = y / 2 + 1;
-            while (x < z) {
-                z = x;
-                x = (y / x + x) / 2;
-            }
-        } else if (y != 0) {
-            z = 1;
-        }
+    function setMinimumLiquidity(uint256 _minimumLiquidity) external {
+        require(_minimumLiquidity > 0, "Invalid minimum");
+        minimumLiquidity = _minimumLiquidity;
     }
 
-    function min(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x < y ? x : y;
-    }
+
 }

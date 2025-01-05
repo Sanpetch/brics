@@ -30,6 +30,12 @@ const toCurrencies = [
   ];
 
 // wait get from smart contract.
+/*
+Smart contract
+cny :1000
+rub 69
+inr 12
+*/
 const exchangeRates = {
     cny: 1,     // 1 CNY = 1 BRICS
     rub: 0.069, // 1 RUB = 0.069 BRICS

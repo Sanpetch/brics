@@ -3,17 +3,19 @@
 import { ethers } from "ethers";
 import { ArrowRightLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
-
+import { useWallet, WalletProvider } from "@/components/WalletContext"; // Import Wallet context
 import CNY_CBDC_ABI from "@/components/ABI/CNY_CBDC_Token.json";
 import INR_CBDC_ABI from "@/components/ABI/INR_CBDC_Token.json";
 import RUB_CBDC_ABI from "@/components/ABI/RUB_CBDC_Token.json";
 import BRICS_ABI from "@/components/ABI/BRICS_Token.json";
 import Vault_ABI from "@/components/ABI/Vault.json";
 import POOL_TOKEN_ABI from "@/components/ABI/POOL_TokenRegis.json";
+import POOL_FEE_ABI from "@/components/ABI/POOL_FeeManager.json";
 import POOL_ABI from "@/components/ABI/POOL.json";
 
-const POOL_ADDR    = process.env.NEXT_PUBLIC_POOL_ADDRESS;
-const TOKENREGISTRY    = process.env.NEXT_PUBLIC_POOL_TOKENREGISTRY_ADDRESS;
+const POOL_ADDR             = process.env.NEXT_PUBLIC_POOL_ADDRESS;
+const POOL_TOKENREGISTRY    = process.env.NEXT_PUBLIC_POOL_TOKENREGISTRY_ADDRESS;
+const POOL_FEE    = process.env.NEXT_PUBLIC_POOL_FEE_ADDRESS;
 const BRICS    = process.env.NEXT_PUBLIC_BRICS_ADDRESS;
 const CNY_CBDC = process.env.NEXT_PUBLIC_CBDC_CNY_ADDRESS;
 const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
@@ -50,6 +52,15 @@ const FEE_RATE = 1;  // 0.01% (1/10000)
 
 
 export default function PoolDeposit() {
+    const { accountData, connectToWallet } = useWallet();
+    const [initialized, setInitialized] = useState(false);
+  
+    useEffect(() => {
+      if (!initialized && !accountData) {
+        connectToWallet().finally(() => setInitialized(true));
+      }
+    }, [initialized, accountData, connectToWallet]);
+
     const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [token0, setToken0] = useState("");
@@ -82,19 +93,29 @@ export default function PoolDeposit() {
             return;
         }
         
-        const amountInWei = ethers.parseUnits(amount0, 2); ; // 2 decimals for the example
-        const amountInWei1 = ethers.parseUnits(amount1, 2); ; // 2 decimals for the example
+        const amountInWei = ethers.parseUnits(amount0, 2); // 2 decimals for the example
+        const amountInWei1 = ethers.parseUnits(amount1, 2); // 2 decimals for the example
       
+        
+        // Check allowance for token1
+    
         // approve
         if(selectedCurrency.id == 'cny')
         {
             const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
             const checkname = await contract_CNY.totalSupply();
             console.log(checkname);
-
+            
             // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
             const approveTx = await contract_CNY.approve(POOL_ADDR, amountInWei);
             await approveTx.wait(); 
+
+            // Check allowance for token0
+            const allowanceToken0 = await contract_CNY.allowance(
+              accountData.address,
+              POOL_ADDR
+            );
+            console.log("Allowance for token0:", allowanceToken0.toString());
         }
         else if (selectedCurrency.id == 'rub')
         {
@@ -106,6 +127,14 @@ export default function PoolDeposit() {
             const approveTx = await contract_RUB.approve(POOL_ADDR, amountInWei);
             await approveTx.wait(); 
 
+
+            // Check allowance for token0
+            const allowanceToken0 = await contract_RUB.allowance(
+              accountData.address,
+              POOL_ADDR
+            );
+            console.log("Allowance for token0:", allowanceToken0.toString());
+
         }
         else if (selectedCurrency.id == 'inr')
         {
@@ -116,12 +145,34 @@ export default function PoolDeposit() {
             // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
             const approveTx = await contract_INR.approve(POOL_ADDR, amountInWei);
             await approveTx.wait(); 
+
+
+            // Check allowance for token0
+            const allowanceToken0 = await contract_INR.allowance(
+              accountData.address,
+              POOL_ADDR
+            );
+            console.log("Allowance for token0:", allowanceToken0.toString());
         }
 
+        // BRICS TOKEN; approve Pool address;
+        const contract_BRICS = new ethers.Contract(BRICS, BRICS_ABI, signer);
+        const checkname = await contract_BRICS.totalSupply();
+        console.log(checkname);
+       
+        // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
+        const approveTx = await contract_BRICS.approve(POOL_ADDR, amountInWei);
+        await approveTx.wait(); 
 
+        const allowanceToken1 = await contract_BRICS.allowance(
+          accountData.address,
+          POOL_ADDR
+        );
+        console.log("Allowance for token1:", allowanceToken1.toString());
         // fromCurrency = token0
         // toCurrency = token1
-        
+        console.log("amountInWei:", amountInWei);
+        console.log("amountInWei1:", amountInWei1);
        
         // Call addLiquidity function
         const tx = await poolContract.addLiquidity(
@@ -136,7 +187,6 @@ export default function PoolDeposit() {
         setSuccess("Liquidity added successfully!");
 
         window.location.reload();
-        
       } catch (err) {
         console.error(err);
         setError(err.message || "An error occurred");

@@ -119,7 +119,9 @@ export default function ExchangeModule() {
           //alert(`Preview Redeem: You will receive ${ethers.formatUnits(pre_redeemTx, 2)} ${selectedCurrency.label}.`);
           
           // Call the redeemCollateral function
-          const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amount);
+          const amountInWei = ethers.parseUnits(amount, 2); // 2 decimals for the example
+          console.log("amountInWei:", amountInWei);
+          const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amountInWei);
           await redeemTx.wait();
 
           /*
