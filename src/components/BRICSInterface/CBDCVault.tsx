@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { ethers } from "ethers";
-
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 // ABI
 import CNY_CBDC_ABI from "@/components/ABI/CNY_CBDC_Token.json";
 import INR_CBDC_ABI from "@/components/ABI/INR_CBDC_Token.json";
@@ -19,18 +19,34 @@ const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
 const BRICS    = process.env.NEXT_PUBLIC_BRICS_ADDRESS;
 
+
+const currencies = [
+  { id: "CNY", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
+  { id: "RUB", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
+  { id: "INR", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
+  //{ id: "brl", name: "Digital Real", label: "Digital Real" },
+  //{ id: "zar", name: "Digital Rand", label: "Digital Rand" },
+  //{ id: "brs", name: "BRICS", label: "BRICS Stablecoin" }
+];
+
+/*
+const exchangeRates = {
+  cny: 3.84,   // 1 CNY ≈ 3.84 BRICS
+  rub: 0.265,  // 1 RUB ≈ 0.265 BRICS
+  inr: 0.331   // 1 INR ≈ 0.331 BRICS
+};
+*/
+
 export default function CBDCPools() {
   const { accountData, connectToWallet } = useWallet();
   const [initialized, setInitialized] = useState(false);
   const [balances, setBalances] = useState<{ [address: string]: string }>({}); // Store balances
   const [error, setError] = useState<string | null>(null);
   const [balanceOfBRICS, setbalanceOfBRICS] = useState(false);
-
-  useEffect(() => {
-    if (!initialized && !accountData) {
-      connectToWallet().finally(() => setInitialized(true));
-    }
-  }, [initialized, accountData, connectToWallet]);
+  const [statusMessages, setStatusMessages] = useState([]);
+  const [collateralRatio, setCollateralRatio] = useState(120);
+  const [exchangeDetails, setExchangeDetails] = useState([]);
+  const [baseRate, setBaseRate] = useState(null); // อัตราแลกเปลี่ยน 1 BRICS = ? CNY
 
   const fetchBalances = async () => {
     try {
@@ -122,11 +138,133 @@ export default function CBDCPools() {
     }
   };
 
+  const fetchCR= async () => {
+    try {
+      if (!window.ethereum) {
+        throw new Error("No crypto wallet found");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+     
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+      const CR = await vaultContract.getCollateralRatio();
+
+      setCollateralRatio(CR);
+      
+    } catch (err: any) {
+      console.error("Error fetching balances:", err);
+      setError(err.message || "Failed to fetch balances");
+    }
+  };
+  
+  const fetchEexchangeRates= async () => {
+    try {
+      if (!window.ethereum) {
+        throw new Error("No crypto wallet found");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+     
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+
+      // ดึงค่าอัตราแลกเปลี่ยน 1 BRICS = ? CNY
+      const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
+      const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+
+      setBaseRate(baseRateFormatted);
+
+      // ดึงอัตราแลกเปลี่ยนสำหรับสกุลเงินอื่น ๆ และคำนวณอัตราแลกเปลี่ยนเทียบกับ BRICS
+      const details = [];
+      for (const currency of currencies) {
+        const rateBigInt = await vaultContract.getExchangeRate(currency.id);
+        const rateFormatted = Number(rateBigInt) / 100;
+
+        const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
+
+        details.push({
+          label: currency.label,
+          id: currency.id,
+          rate: rateFormatted,
+          bricsToCurrency
+        });
+      }
+      setExchangeDetails(details);
+      
+    } catch (err: any) {
+      console.error("Error fetching balances:", err);
+      setError(err.message || "Failed to fetch balances");
+    }
+  };
+
+  const checkSystemStatus = async () => {
+    try {
+      if (!window.ethereum) {
+        throw new Error("No crypto wallet found");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+      
+      const messages = [];
+      const collateralRatioBigInt = Number(collateralRatio); // แปลง CR เป็น BigInt
+     
+      for (const currency of currencies) {
+        const exchangeRateBigInt = await vaultContract.getExchangeRate(currency.id);
+        const exchangeRate = Number(exchangeRateBigInt); // แปลง BigInt เป็น number
+
+        // Convert the exchange rate to a percentage for easier comparison
+        const effectiveRatio = (100 * exchangeRate) / collateralRatioBigInt;
+        console.log("effectiveRatio: " + effectiveRatio);
+        /*
+          if (effectiveRatio < 100) มีจุดประสงค์เพื่อ ตรวจสอบว่าอัตราส่วน (Effective Ratio) ต่ำกว่าค่า Collateral Ratio (CR) หรือไม่ ซึ่งเป็นแนวคิดสำคัญในระบบที่ใช้ Over-collateralization
+          
+          Effective Ratio คืออัตราส่วนที่คำนวณได้จากอัตราแลกเปลี่ยนปัจจุบันของหลักประกันเทียบกับจำนวน
+          Effective Ratio = (มูลค่าหลักประกันปัจจุบัน / จำนวน BRICS ที่สร้างขึ้น) * 100      
+            
+          หาก Effective Ratio ต่ำกว่า 100% หมายความว่ามูลค่าหลักประกันไม่เพียงพอที่จะครอบคลุม BRICS ที่สร้างขึ้น ซึ่งถือว่าเป็นสถานการณ์ที่มีความเสี่ยง
+        */
+        if (effectiveRatio < 100) {
+          messages.push({
+            symbol: currency.symbol,
+            status: "Warning",
+            message: `${currency.label}(${currency.id}) is below the required Collateral Ratio (CR).`
+          });
+        } else {
+          messages.push({
+            symbol: currency.symbol,
+            status: "OK",
+            message: `${currency.label}(${currency.id}) is maintaining optimal ratios.`
+          });
+        }
+      }
+
+      setStatusMessages(messages);
+    } catch (error) {
+      console.error("Error checking system status:", error);
+      alert("Failed to fetch system status. Please try again.");
+    }
+  };
+
+
   useEffect(() => {
     if (accountData?.address) {
       fetchBalances();
     }
+    //fetchCR();
   }, [accountData]);
+
+  useEffect(() => {
+    if (!initialized) {
+      setCollateralRatio(120);
+      fetchEexchangeRates();
+      checkSystemStatus();
+      setInitialized(true);
+    }
+  }, [initialized]);
+
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -150,42 +288,76 @@ export default function CBDCPools() {
                 </div>
             </div>
         </div>
-     <div className="space-y-3">
-     <div className="flex items-center justify-between mb-4"></div>
-     </div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">CBDC Vault by user</h2>
-        <Building2 className="text-blue-600 w-6 h-6" />
-      </div>
-      {error && <div className="text-red-600 mb-4">{error}</div>}
-      <div className="space-y-3">
-        {mockCBDCs.map((cbdc) => (
-          <div
-            key={cbdc.country}
-            className="flex items-center justify-between p-2 bg-gray-50 rounded"
-          >
-            <div>
-              <div className="font-medium">{cbdc.country}</div>
-              <div className="text-sm text-gray-500">{cbdc.currency}</div>
-            </div>
-            <div className="text-right">
-              <div className="font-medium">
-                {balances[cbdc.address]
-                  ? balances[cbdc.address] === "Invalid Address"
-                    ? "Invalid Address"
-                    : `${balances[cbdc.address]} Tokens`
-                  :  cbdc.status == 'Active' ?  ( "Loading..."  ): ("Disable" )
-                  
-                  }
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between mb-4"></div>
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">CBDC Vault by user</h2>
+          <Building2 className="text-blue-600 w-6 h-6" />
+        </div>
+        
+        {error && <div className="text-red-600 mb-4">{error}</div>}
+        
+        <div className="space-y-3">
+          {mockCBDCs.map((cbdc) => (
+            <div
+              key={cbdc.country}
+              className="flex items-center justify-between p-2 bg-gray-50 rounded"
+            >
+              <div>
+                <div className="font-medium">{cbdc.country}</div>
+                <div className="text-sm text-gray-500">{cbdc.currency}</div>
               </div>
-              {cbdc.status == 'Active' ?  (
-              <div className="text-sm text-green-600">{cbdc.status}</div>
-              ) : (
-                <div className="text-sm text-red-600">{cbdc.status}</div>
-              )}
+              <div className="text-right">
+                <div className="font-medium">
+                  {balances[cbdc.address]
+                    ? balances[cbdc.address] === "Invalid Address"
+                      ? "Invalid Address"
+                      : `${balances[cbdc.address]} Tokens`
+                    :  cbdc.status == 'Active' ?  ( "Loading..."  ): ("Disable" )
+                    }
+                </div>
+                {cbdc.status == 'Active' ?  (
+                <div className="text-sm text-green-600">{cbdc.status}</div>
+                ) : (
+                  <div className="text-sm text-red-600">{cbdc.status}</div>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between mb-4"></div>
+        </div>
+        {statusMessages.length > 0 && (
+         <div className="flex items-center justify-between mb-4">
+          <div className="w-full space-y-3">
+            {statusMessages.map((status, index) => (
+              <Alert
+                key={index}
+                className={
+                  status.status === "Warning"
+                    ? "bg-red-50 text-red-800"
+                    : "bg-blue-50 text-blue-800"
+                }
+              >
+                <AlertTitle>{status.status === "Warning" ? "Warning" : ""}</AlertTitle>
+                <AlertDescription>{status.message}</AlertDescription>
+              </Alert>
+            ))}
           </div>
-        ))}
+        </div>
+        )}  
+
+        <div className="pt-4">
+          <button
+            className="w-full bg-blue-600 text-white rounded-lg p-3 hover:bg-blue-700 transition-colors"
+            onClick={checkSystemStatus}
+          >
+            Check Status
+        </button>
       </div>
     </div>
   );

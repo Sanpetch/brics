@@ -6,24 +6,24 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 interface IERC20Mintable is IERC20 {
     function mint(address to, uint256 amount) external;
+    function burn(address from, uint256 amount) external;
 }
 
 contract BRICSVaultV2 is ERC4626 {
     struct VaultInfo {
         IERC20 asset;
-        uint256 exchangeRate; // Rate in CNY * 1000 for precision
+        uint256 exchangeRate; // Scaled by 100 (2 decimal places)
     }
 
     mapping(string => VaultInfo) public vaults;
     mapping(address => mapping(string => uint256)) public userDeposits; // Tracks deposits by user and token symbol
     mapping(string => uint256) public currencyWeights; // Weight of each currency in BRICS
-    uint256 public collateralRatio = 150; // 150%
-    // เก็บค่าธรรมเนียมใน Vault กลาง
     mapping(string => uint256) public totalDeposits;
 
+    uint256 public collateralRatio = 120; // 120%
     address public vaultWalletAddress;
     //address public constant CNY = 0xd37BaD73F63e3725d364B65717d1c18e5186296f; // Used on Test network.
-    address public constant CNY = 0xd37BaD73F63e3725d364B65717d1c18e5186296f; // Repalce for test(local)
+    address public constant CNY = 0x928C0221CA29E42d1b3f820c8B3C43e5A3bF65Ef; // Repalce for test(local)
     address public constant RUB = 0x9876EEAf962ADfc612486C5D54BCb9D8B5e50878; // Used on Test network.
     address public constant INR = 0xe3077475D1219088cD002B75c8bB46567D7F37ae; // Used on Test network.
 
@@ -33,17 +33,17 @@ contract BRICSVaultV2 is ERC4626 {
 
         vaults["CNY"] = VaultInfo({
             asset: IERC20(CNY), 
-            exchangeRate: 1000  // 1 CNY = 1 CNY (scaled by 1000)
+            exchangeRate: 26  // 1 BRICS = 0.26 CNY
         });
 
         vaults["RUB"] = VaultInfo({
             asset: IERC20(RUB), 
-            exchangeRate: 69   // 1 RUB = 0.069 CNY
+            exchangeRate: 377   // 1 BRICS = 3.77 RUB
         });
 
         vaults["INR"] = VaultInfo({
             asset: IERC20(INR), 
-            exchangeRate: 12  // 1 INR = 0.012 CNY
+            exchangeRate: 302  // 1 BRICS = 3.02 INR
         });
 
         vaults["BRICS"] = VaultInfo({
@@ -56,12 +56,34 @@ contract BRICSVaultV2 is ERC4626 {
         currencyWeights["INR"] = 30;
     }
 
-    // 1 _exchangeRate for CNY
-    /*
-    vault.addTokenVault("CNY", CNY_ERC20_Address, 1000); // 1 CNY = 1 CNY
-    vault.addTokenVault("RUB", RUB_ERC20_Address, 69);   // 1 RUB = 0.069 CNY
-    vault.addTokenVault("INR", INR_ERC20_Address, 12);   // 1 INR = 0.012 CNY
-    */
+    modifier onlyAdmin() {
+        require(msg.sender == vaultWalletAddress, "Only admin can perform this action");
+        _;
+    }
+
+    // Set collateral ratio (only admin)
+    function setCollateralRatio(uint256 _ratio) external onlyAdmin {
+        require(_ratio >= 100, "Collateral ratio must be at least 100%");
+        collateralRatio = _ratio;
+    }
+
+    function getCollateralRatio() public view returns (uint256 currentCollateralRatio) {
+        currentCollateralRatio = collateralRatio;
+    }
+
+    // Set exchange rate (only admin)
+    function setExchangeRate(string memory symbol, uint256 rate) external onlyAdmin {
+        require(rate > 0, "Rate must be greater than 0");
+        require(address(vaults[symbol].asset) != address(0), "Token not supported");
+
+        vaults[symbol].exchangeRate = rate;
+    }
+
+    function getExchangeRate(string memory symbol) external view returns (uint256) {
+        require(address(vaults[symbol].asset) != address(0), "Currency not supported");
+        return vaults[symbol].exchangeRate;
+    }
+
     function addTokenVault(string memory symbol, IERC20 _asset, uint256 _exchangeRate) external {
         require(msg.sender == vaultWalletAddress, "Only admin can add token");
         require(address(vaults[symbol].asset) == address(0), "Token already added");
@@ -81,19 +103,7 @@ contract BRICSVaultV2 is ERC4626 {
         });
     }
    
-    // 1.1 Set the exchange rate for a specific token
-    function setExchangeRate(string memory symbol, uint256 rate) external {
-        require(msg.sender == vaultWalletAddress, "Only admin can set exchange rate");
-        require(rate > 0, "Rate must be greater than 0");
-        require(address(vaults[symbol].asset) != address(0), "Token not supported");
-
-        vaults[symbol].exchangeRate = rate; // 0.069
-    }
-
-    function getExchangeRate(string memory symbol) external view returns (uint256) {
-        require(address(vaults[symbol].asset) != address(0), "Currency not supported");
-        return vaults[symbol].exchangeRate;
-    }
+    
    
     // 1.1
     /*
@@ -145,8 +155,7 @@ contract BRICSVaultV2 is ERC4626 {
     */
     function depositCollateral(string memory symbol, uint256 amount) public {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
-        require(vaults[symbol].exchangeRate > 0, "Invalid exchange rate");
-        require(currencyWeights[symbol] > 0, "Weight not set for token");
+        require(amount > 0, "Amount must be greater than 0");
 
         // ตรวจสอบการอนุมัติ
         uint256 allowance = vaults[symbol].asset.allowance(msg.sender, address(this));
@@ -154,7 +163,6 @@ contract BRICSVaultV2 is ERC4626 {
 
         // Transfer collateral to the contract
         vaults[symbol].asset.transferFrom(msg.sender, address(this), amount);
-        //ERC20(address(vaults[symbol].asset)).transferFrom(msg.sender, address(this), amount);
 
         // Update user deposits
         userDeposits[msg.sender][symbol] += amount;
@@ -162,31 +170,29 @@ contract BRICSVaultV2 is ERC4626 {
         // อัปเดตยอดรวมของโทเค็นที่ถูกฝาก
         totalDeposits[symbol] += amount;
 
-        // Calculate the value in CNY and apply the weight
-        uint256 collateralValueCNY = (amount * vaults[symbol].exchangeRate) / 1000;
+        // Calculate the maximum mintable amount of BRICS
+        uint256 collateralValue = (amount * 100) / vaults[symbol].exchangeRate;
+        uint256 maxMintableBRICS = (collateralValue * 100) / collateralRatio;
 
-        // Apply the collateral ratio to determine the BRICS to mint
-        uint256 bricsToMint = collateralValueCNY / (collateralRatio / 100);
+        require(maxMintableBRICS > 0, "Not enough collateral to mint BRICS");
 
-        require(bricsToMint > 0, "Not enough collateral to mint BRICS");
-
-        // Mint BRICS tokens
-        _mint(msg.sender, bricsToMint); // for redeem.
+        // Mint vBRICS tokens
+        _mint(msg.sender, maxMintableBRICS); // for redeem.
 
         // Mint BRICS ให้ผู้ใช้ (หลังหักค่าธรรมเนียม)
-        IERC20Mintable(address(vaults["BRICS"].asset)).mint(msg.sender, bricsToMint);
+        IERC20Mintable(address(vaults["BRICS"].asset)).mint(msg.sender, maxMintableBRICS);
     }
 
-    function previewDeposit(string memory symbol, uint256 amount) public view returns (uint256 bricsToMint) {
+    function previewDepositCollateral(string memory symbol, uint256 amount) public view returns (uint256 maxMintableBRICS) {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
-        require(vaults[symbol].exchangeRate > 0, "Invalid exchange rate");
-        require(currencyWeights[symbol] > 0, "Weight not set for token");
+        require(amount > 0, "Amount must be greater than 0");
 
-        // Calculate the value in CNY and apply the weight
-        uint256 collateralValueCNY = (amount * vaults[symbol].exchangeRate) / 1000;
+        VaultInfo storage vault = vaults[symbol];
+        uint256 exchangeRate = vault.exchangeRate;
 
-        // Apply the collateral ratio to determine the BRICS to mint
-        bricsToMint = collateralValueCNY / (collateralRatio / 100);
+        // Calculate the maximum mintable amount of BRICS
+        uint256 collateralValue = (amount * 100) / exchangeRate;
+        maxMintableBRICS = (collateralValue * 100) / collateralRatio;
     }
 
     // View user-specific deposits.  20241226 used.
@@ -199,21 +205,6 @@ contract BRICSVaultV2 is ERC4626 {
         return totalDeposits[symbol];
     }
 
-
-    // Calculate the value of 1 BRICS in CNY
-    function calculateBRICSValueInCNY() public view returns (uint256) {
-        /*
-        uint256 valueInCNY = (currencyWeights["CNY"] * 1000) +
-                             (currencyWeights["RUB"] * vaults["RUB"].exchangeRate) / 1000 +
-                             (currencyWeights["BRL"] * vaults["BRL"].exchangeRate) / 1000;
-        */
-        uint256 valueInCNY = (currencyWeights["CNY"]) +
-                             (currencyWeights["RUB"] * vaults["RUB"].exchangeRate) +
-                             (currencyWeights["BRL"] * vaults["BRL"].exchangeRate);
-        return valueInCNY;
-    }
-
-    
     function getContractBalance(string memory symbol) public view returns (uint256) {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
         return vaults[symbol].asset.balanceOf(address(this));
@@ -224,31 +215,30 @@ contract BRICSVaultV2 is ERC4626 {
         return vaults[symbol].asset.allowance(owner, spender);
     }
 
-
     function redeemCollateral(string memory symbol, uint256 bricsAmount) public {
         require(bricsAmount > 0, "Redeem amount must be greater than zero");
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
 
         VaultInfo storage vault = vaults[symbol];
+        uint256 exchangeRate = vault.exchangeRate;
 
-        uint256 requiredCNYValue = bricsAmount * vault.exchangeRate;
-        uint256 collateralAmount = requiredCNYValue * (collateralRatio / 100);
+        // Calculate the collateral amount to return
+        uint256 collateralAmount = (bricsAmount * exchangeRate) / 100;
+        require(userDeposits[msg.sender][symbol] >= collateralAmount, "Insufficient collateral balance");
 
-        uint256 userDepositBalance = userDeposits[msg.sender][symbol];
-        require(userDepositBalance >= collateralAmount, "Insufficient deposited amount for redeem");
 
-        //uint256 contractBalance = vault.asset.balanceOf(address(this));
-        uint256 contractBalance = vault.asset.balanceOf(address(this));
-        require(contractBalance >= collateralAmount, "Insufficient collateral in vault");
-        
-        // the problem
-        vault.asset.transfer(msg.sender,  collateralAmount );
-        
+        // Transfer collateral back to the user
+        vault.asset.transfer(msg.sender, collateralAmount);
+
+        // Update user deposits
         userDeposits[msg.sender][symbol] -= collateralAmount;
 
+        // Burn vBRICS tokens from the user
         _burn(msg.sender, bricsAmount);
-    }
 
+        // Burn BRICS tokens from the user
+        IERC20Mintable(address(vaults["BRICS"].asset)).burn(msg.sender, bricsAmount);
+    }
 
     // Preview the amount of collateral for redeeming BRICS tokens
     function previewRedeem(string memory symbol, uint256 bricsAmount) public view returns (uint256 collateralAmount) {
@@ -256,11 +246,73 @@ contract BRICSVaultV2 is ERC4626 {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
 
         VaultInfo storage vault = vaults[symbol];
-        uint256 requiredCNYValue = bricsAmount * vault.exchangeRate;
-        
-        collateralAmount = requiredCNYValue * (collateralRatio / 100);
+        uint256 exchangeRate = vault.exchangeRate;
+
+        // Calculate the collateral amount to return
+        collateralAmount = (bricsAmount * exchangeRate) / 100;
     }
 
+
+
+    // ตรวจสอบ Effective Ratio และบังคับถอนหากต่ำกว่า 100%
+    function checkAndForceWithdraw(address user, string memory symbol) public onlyAdmin {
+        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
+        
+        uint256 userDepositBalance = userDeposits[user][symbol];
+        require(userDepositBalance > 0, "No collateral to check");
+
+        VaultInfo storage vault = vaults[symbol];
+        uint256 exchangeRate = vault.exchangeRate;
+
+        // คำนวณ Effective Ratio ของผู้ใช้
+        uint256 collateralValue = (userDepositBalance * 100) / exchangeRate;
+        uint256 effectiveRatio = (collateralValue * 100) / collateralRatio;
+
+        if (effectiveRatio < 100) {
+            forcedWithdraw(user, symbol);
+        }
+    }
+        
+    // ฟังก์ชันบังคับถอน (Forced Withdraw) เมื่อ Effective Ratio ต่ำกว่า 100%
+    function forcedWithdraw(address user, string memory symbol) public onlyAdmin {
+        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
+        
+        uint256 userDepositBalance = userDeposits[user][symbol];
+        require(userDepositBalance > 0, "No collateral to withdraw");
+
+        VaultInfo storage vault = vaults[symbol];
+        uint256 exchangeRate = vault.exchangeRate;
+
+        // คำนวณจำนวน BRICS ที่ต้อง Burn
+        uint256 bricsAmount = (userDepositBalance * 100) / exchangeRate;
+
+        // Burn BRICS จากผู้ใช้
+        _burn(user, bricsAmount);
+        IERC20Mintable(address(vaults["BRICS"].asset)).burn(user, bricsAmount);
+
+        // โอนหลักประกันคืนให้ผู้ใช้
+        vault.asset.transfer(user, userDepositBalance);
+
+        // อัปเดตยอดเงินฝากของผู้ใช้
+        userDeposits[user][symbol] = 0;
+    }
+
+    // Preview forced withdraw: คำนวณจำนวนหลักประกันและ BRICS ที่ต้อง Burn
+    function previewForcedWithdraw(address user, string memory symbol) public view returns (uint256 collateralAmount, uint256 bricsAmount) {
+        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
+
+        uint256 userDepositBalance = userDeposits[user][symbol];
+        require(userDepositBalance > 0, "No collateral to withdraw");
+
+        VaultInfo storage vault = vaults[symbol];
+        uint256 exchangeRate = vault.exchangeRate;
+
+        // คำนวณจำนวน BRICS ที่ต้อง Burn
+        bricsAmount = (userDepositBalance * 100) / exchangeRate;
+
+        // จำนวนหลักประกันทั้งหมดที่จะคืนให้ผู้ใช้
+        collateralAmount = userDepositBalance;
+    }
 }
 
 // Concrete implementation for ERC4626

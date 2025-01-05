@@ -70,11 +70,13 @@ export default function PoolDeposit() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [decimals, setDecimals] = useState(0);
   
     const handleAddLiquidity = async () => {
       setLoading(true);
       setError(null);
       setSuccess(null);
+      setDecimals(0);
   
       try {
         if (!window.ethereum) {
@@ -92,11 +94,6 @@ export default function PoolDeposit() {
             alert("Invalid currency selected.");
             return;
         }
-        
-        const amountInWei = ethers.parseUnits(amount0, 2); // 2 decimals for the example
-        const amountInWei1 = ethers.parseUnits(amount1, 2); // 2 decimals for the example
-      
-        
         // Check allowance for token1
     
         // approve
@@ -105,9 +102,14 @@ export default function PoolDeposit() {
             const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
             const checkname = await contract_CNY.totalSupply();
             console.log(checkname);
+            // Get decimals of the token
+            const decimals_local = await contract_CNY.decimals();
+            setDecimals(decimals_local);
+
+            const amountInWeiLoc = ethers.parseUnits(amount0, decimals_local); // 2 decimals for the example
             
             // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
-            const approveTx = await contract_CNY.approve(POOL_ADDR, amountInWei);
+            const approveTx = await contract_CNY.approve(POOL_ADDR, amountInWeiLoc);
             await approveTx.wait(); 
 
             // Check allowance for token0
@@ -117,14 +119,21 @@ export default function PoolDeposit() {
             );
             console.log("Allowance for token0:", allowanceToken0.toString());
         }
+        
         else if (selectedCurrency.id == 'rub')
         {
             const contract_RUB = new ethers.Contract(RUB_CBDC, RUB_CBDC_ABI, signer);
             const checkname = await contract_RUB.totalSupply();
             console.log(checkname);
 
+            // Get decimals of the token
+            const decimals_local = await contract_RUB.decimals();
+            setDecimals(decimals_local);
+ 
+             const amountInWeiLoc = ethers.parseUnits(amount0, decimals_local); // 2 decimals for the example
+
             // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
-            const approveTx = await contract_RUB.approve(POOL_ADDR, amountInWei);
+            const approveTx = await contract_RUB.approve(POOL_ADDR, amountInWeiLoc);
             await approveTx.wait(); 
 
 
@@ -142,8 +151,15 @@ export default function PoolDeposit() {
             const checkname = await contract_INR.totalSupply();
             console.log(checkname);
 
+            // Get decimals of the token
+            const decimals_local = await contract_INR.decimals();
+            setDecimals(decimals_local);
+
+            const amountInWeiLoc = ethers.parseUnits(amount0, decimals_local); // 2 decimals for the example
+
+
             // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
-            const approveTx = await contract_INR.approve(POOL_ADDR, amountInWei);
+            const approveTx = await contract_INR.approve(POOL_ADDR, amountInWeiLoc);
             await approveTx.wait(); 
 
 
@@ -154,8 +170,14 @@ export default function PoolDeposit() {
             );
             console.log("Allowance for token0:", allowanceToken0.toString());
         }
+        
+        console.log("Token decimals:", decimals);
 
+        const amountInWei = ethers.parseUnits(amount0, 18); // 2 decimals for the example
+        console.log("amountInWei:", amountInWei);
+        const amountInWei1 = ethers.parseUnits(amount1, 18); // 2 decimals for the example
         // BRICS TOKEN; approve Pool address;
+        
         const contract_BRICS = new ethers.Contract(BRICS, BRICS_ABI, signer);
         const checkname = await contract_BRICS.totalSupply();
         console.log(checkname);
@@ -174,6 +196,7 @@ export default function PoolDeposit() {
         console.log("amountInWei:", amountInWei);
         console.log("amountInWei1:", amountInWei1);
        
+        
         // Call addLiquidity function
         const tx = await poolContract.addLiquidity(
           fromCurrency.toUpperCase(),
@@ -187,6 +210,7 @@ export default function PoolDeposit() {
         setSuccess("Liquidity added successfully!");
 
         window.location.reload();
+       
       } catch (err) {
         console.error(err);
         setError(err.message || "An error occurred");

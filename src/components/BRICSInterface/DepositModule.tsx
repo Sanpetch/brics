@@ -30,6 +30,8 @@ const toCurrencies = [
   ];
 
 // wait get from smart contract.
+const collateralRatio = 120; // Collateralization Ratio in percentage
+
 /*
 Smart contract
 cny :1000
@@ -37,9 +39,9 @@ rub 69
 inr 12
 */
 const exchangeRates = {
-    cny: 1,     // 1 CNY = 1 BRICS
-    rub: 0.069, // 1 RUB = 0.069 BRICS
-    inr: 0.012, // 1 INR = 0.012 BRICS
+  cny: 26,    // 1 BRICS = 0.26 CNY -> scaled by 100
+  rub: 377,   // 1 BRICS = 3.77 RUB -> scaled by 100
+  inr: 302    // 1 BRICS = 3.02 INR -> scaled by 100
 };
 
 const currencyWeights = {
@@ -48,49 +50,33 @@ const currencyWeights = {
     inr: 30, 
 };
 
-const collateralRatio = 150; // Collateralization Ratio in percentage
-const FEE_RATE = 1;  // 0.01% (1/10000)
-
-
 export default function ExchangeModule() {
     const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [amount, setAmount] = useState("");
     const [estimatedBRICS, setEstimatedBRICS] = useState(0);
-
-    // คำนวณอัตราแลกเปลี่ยน
-    const exchangeRate = exchangeRates[fromCurrency] || 1;
-
-     // Calculate collateralRatio
-    const calculateCR = () => {
-        if (!amount) return 0;
-
-        const collateralValueCNY = Number(amount) * exchangeRate;
-        const bricsMinted = collateralValueCNY / (collateralRatio / 100);
-
-        return (collateralValueCNY / bricsMinted) * 100;
-    }
-
-    // Calculate Estimate BRICS mint.
+    const [details, setDetails] = useState({ preCR: 0, postCR: 0 });
+   
+    const exchangeRate = exchangeRates[fromCurrency] || 1 ;
+    
     const calculateEstimatebricsMinted = () => {
-        if (!amount) return 0;
+        if (!amount || !fromCurrency) return { preCR: 0, postCR: 0 }
 
-        // 20241226
-        const collateralValueCNY = Number(amount) * exchangeRate;
-        const bricsMinted = collateralValueCNY / (collateralRatio / 100);
-        
-        return bricsMinted;
+        const exchangeRateLocal = exchangeRates[fromCurrency]; // อัตราแลกเปลี่ยนของสกุลเงินที่เลือก
+        const collateralValue = Number(amount) * 100; // แปลงเป็นหน่วยที่มี 2 ตำแหน่งทศนิยม (scaled by 100)
+        const bricsPreCR = collateralValue / exchangeRateLocal; // จำนวน BRICS ก่อนใช้ collateralRatio
+        const bricsPostCR = (bricsPreCR * 100) / collateralRatio; // จำนวน BRICS หลังใช้ collateralRatio
+    
+        return { preCR: bricsPreCR, postCR: Math.floor(bricsPostCR) }; // ปัดเศษลงให้เป็นจำนวนเต็ม
     }
 
-    // อัปเดตค่า estimatedBRICS ทุกครั้งที่ amount หรือ fromCurrency เปลี่ยน
     useEffect(() => {
-        const newEstimatedBRICS = calculateEstimatebricsMinted();
-        setEstimatedBRICS(newEstimatedBRICS);
+        const { preCR, postCR } = calculateEstimatebricsMinted();
+
+        setEstimatedBRICS(postCR);
+        setDetails({ preCR, postCR });
+
     }, [amount, fromCurrency]);
-
-
-    const estimatedCR = calculateCR();
-    const estimatebricsMinted = calculateEstimatebricsMinted();
 
 
     const handleDeposit = async () => {
@@ -106,53 +92,43 @@ export default function ExchangeModule() {
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             
-           
             const selectedCurrency = currencies.find((c) => c.id === fromCurrency);
             if (!selectedCurrency) {
                 alert("Invalid currency selected.");
                 return;
             }
 
-            console.log(selectedCurrency);
-            //const amountInWei = ethers.utils.parseUnits(amount, 2); // 2 decimals for the example
-            const amountInWei = ethers.parseUnits(amount, 2); // 2 decimals for the example
+            // แปลงจำนวนเงินเป็นหน่วยที่มี 2 ทศนิยม
+            const amountInWei = ethers.parseUnits(amount, 2); 
 
             if(selectedCurrency.id == 'cny')
             {
                 const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
-                const checkname = await contract_CNY.totalSupply();
-                console.log(checkname);
-
-                // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
+                
+                // Approve Vault ให้สามารถใช้จำนวนโทเค็นที่ระบุได้
                 const approveTx = await contract_CNY.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
             else if (selectedCurrency.id == 'rub')
             {
                 const contract_RUB = new ethers.Contract(RUB_CBDC, RUB_CBDC_ABI, signer);
-                const checkname = await contract_RUB.totalSupply();
-                console.log(checkname);
 
-                // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
+                // Approve Vault ให้สามารถใช้จำนวนโทเค็นที่ระบุได้
                 const approveTx = await contract_RUB.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
-
             }
             else if (selectedCurrency.id == 'inr')
             {
                 const contract_INR = new ethers.Contract(INR_CBDC, INR_CBDC_ABI, signer);
-                const checkname = await contract_INR.totalSupply();
-                console.log(checkname);
 
-                // เรียก approve ให้ Vault ใช้งานจำนวนโทเค็น
+                // Approve Vault ให้สามารถใช้จำนวนโทเค็นที่ระบุได้
                 const approveTx = await contract_INR.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
             
-             // ยังไม่มี dialog wating (Loading) *********************
+            // ********************* ยังไม่มี dialog wating (Loading) *********************
 
-
-            // เรียก Deposit บน Vault (Smart Contract Deposit function)
+            // เรียกฟังก์ชัน depositCollateral ใน Smart Contract
             const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
             const depositTx = await vaultContract.depositCollateral(
                 selectedCurrency.id.toUpperCase(),
@@ -166,10 +142,6 @@ export default function ExchangeModule() {
             console.error("Error during deposit:", error);
             alert("Something went wrong. Please try again.");
         }
-    };
-
-    const handleAmountChange = (e) => {
-        setAmount(e.target.value);
     };
 
     return (
@@ -203,7 +175,7 @@ export default function ExchangeModule() {
                 className="w-full p-2 border rounded-lg"
                 placeholder="Enter amount"
                 value={amount}
-                onChange={handleAmountChange}
+                onChange={(e) => setAmount(e.target.value)}
             />
             </div>
 
@@ -233,18 +205,28 @@ export default function ExchangeModule() {
 
             {amount && (
             <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="text-sm text-gray-600">Estimated Rate</div>
-                <div className="font-semibold">
-                1 {currencies.find((c) => c.id === fromCurrency)?.label} ={" "}
-                {exchangeRate.toFixed(2)} BRICS
+                <div className="font-semibold">Estimated Rate</div>
+                <div className="text-sm">
+                    - 1 BRICS ≈ {(exchangeRate / 100).toFixed(2)} {currencies.find((c) => c.id === fromCurrency)?.label} 
                 </div>
-                
-                <div className="text-sm text-gray-600 mt-2">Estimated BRICS minted</div>
-                <div className="font-semibold">
-                    {new Intl.NumberFormat('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(estimatebricsMinted)} BRICS
+                <div className="text-sm">
+                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} to BRICS สามารถทำได้โดยการหาร 1 ด้วย {exchangeRate / 100}
+                </div>
+                <div className="text-sm ">
+                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} ≈ {(100 / exchangeRate).toFixed(2)} BRICS
+                </div>
+                <div className="font-semibold mt-2">Estimated BRICS mint</div>
+                <div className="text-sm">
+                - คำนวณ BRICS ที่จะได้รับ (ก่อนใช้ CR): {details.preCR.toFixed(2)} BRICS
+                </div>
+                <div className="text-sm">
+                - ปรับจำนวน BRICS ด้วย CR({collateralRatio}%) = ({details.preCR.toFixed(2)} x 100 ) / {collateralRatio/100} ≈ {details.postCR.toFixed(2)}
+                </div>
+                <div className="font-semibold mt-2">
+                Estimated mint: {new Intl.NumberFormat('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(estimatedBRICS)} BRICS
                 </div>
             </div>
             )}

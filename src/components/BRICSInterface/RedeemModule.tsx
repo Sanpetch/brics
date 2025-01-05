@@ -30,10 +30,11 @@ const currencies = [
   ];
 
 // wait get from smart contract.
+
 const exchangeRates = {
-    cny: 1,     // 1 CNY = 1 BRICS
-    rub: 0.069, // 1 RUB = 0.069 BRICS
-    inr: 0.012, // 1 INR = 0.012 BRICS
+    cny: 3.84,   // 1 CNY ≈ 3.84 BRICS
+    rub: 0.265,  // 1 RUB ≈ 0.265 BRICS
+    inr: 0.331   // 1 INR ≈ 0.331 BRICS
 };
 
 const currencyWeights = {
@@ -42,106 +43,89 @@ const currencyWeights = {
     inr: 30, 
 };
 
-const collateralRatio = 150; // Collateralization Ratio in percentage
+const collateralRatio = 120; // Collateralization Ratio in percentage
 
 
 export default function ExchangeModule() {
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
     const [amount, setAmount] = useState("");
-    const [estimatedBRICS, setEstimatedBRICS] = useState(0);
+    const [collateralDetails, setCollateralDetails] = useState({ preFloor: 0, postFloor: 0 });
 
     // อัตราแลกเปลี่ยน
     const exchangeRate = exchangeRates[toCurrency] || 1;
 
     const calculateCollateralToReceive = () => {
-      if (!amount || !toCurrency) return 0;
-  
-      const exchangeRate = exchangeRates[toCurrency] || 1; // อัตราแลกเปลี่ยนของสกุลเงินที่เลือก
-      const equivalentCurrency = Number(amount) * exchangeRate; // จำนวนโทเค็นที่ได้ตาม Exchange Rate
-      const collateralAmount = equivalentCurrency * (collateralRatio / 100); // Apply CR = 150%
-  
-      return collateralAmount;
+        if (!amount || !toCurrency) return { preFloor: 0, postFloor: 0 };
+
+        const exchangeRateLocal = exchangeRates[toCurrency] || 1;
+        const bricsAmount = Number(amount);
+        const collateralPreFloor = bricsAmount / exchangeRateLocal; // จำนวนเงินค้ำประกันก่อนปัดเศษ
+        const collateralPostFloor = Math.floor(collateralPreFloor); // ปัดเศษลงเป็นจำนวนเต็ม
+
+        return { preFloor: collateralPreFloor, postFloor: collateralPostFloor };
     };
   
-
     useEffect(() => {
-      const estimatedValue = calculateCollateralToReceive();
-      setEstimatedBRICS(estimatedValue);
+        const details = calculateCollateralToReceive();
+        setCollateralDetails(details);
     }, [amount, toCurrency]);
   
-    const estimateCollateralToReceive = calculateCollateralToReceive();
 
     const handleRedeem = async () => {
-      if (!amount) {
-          alert("Please enter an amount.");
-          return;
-      }
-      try {
-          if (!window.ethereum) {
-              throw new Error("No crypto wallet found");
-          }
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-  
-          // ตรวจสอบยอดคงเหลือ BRICS ใน Wallet
-          const bricsContract = new ethers.Contract(BRICS, BRICS_ABI, signer);
-          const userAddress = await signer.getAddress();
-          const balance = await bricsContract.balanceOf(userAddress);
-          const balanceInDecimal = ethers.formatUnits(balance, 2); // 2 decimals
-  
-          if (Number(amount) > Number(balanceInDecimal)) {
-              alert(`Insufficient BRICS balance. You only have ${balanceInDecimal} BRICS.`);
-              return;
-          }
-  
-          const selectedCurrency = toCurrencies.find((c) => c.id === toCurrency);
-          if (!selectedCurrency) {
-              alert("Invalid currency selected.");
-              return;
-          }
-  
-          const collateralAmount = calculateCollateralToReceive();
-  
-          console.log("Redeem Amount (BRICS):", amount);
-          console.log("Collateral Amount to Receive:", collateralAmount);
-  
-          // Approve Vault เพื่อให้สามารถใช้โทเค็น BRICS คืนได้
-          //const approveTx = await bricsContract.approve(vaultAddress, ethers.parseUnits(amount, 2));
-          //await approveTx.wait();
-  
-           // ยังไม่มี dialog wating (Loading) *********************
-        
-          // เรียกใช้ฟังก์ชัน Redeem ใน Vault
-          const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
-          
-          //const pre_redeemTx = await vaultContract["previewRedeem(string,uint256)"](selectedCurrency.id.toUpperCase(), amount);
-          //alert(`Preview Redeem: You will receive ${ethers.formatUnits(pre_redeemTx, 2)} ${selectedCurrency.label}.`);
-          
-          // Call the redeemCollateral function
-          const amountInWei = ethers.parseUnits(amount, 2); // 2 decimals for the example
-          console.log("amountInWei:", amountInWei);
-          const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amountInWei);
-          await redeemTx.wait();
+        if (!amount) {
+            alert("Please enter an amount.");
+            return;
+        }
+        try {
+            if (!window.ethereum) {
+                throw new Error("No crypto wallet found");
+            }
 
-          /*
-          const redeemTx = await vaultContract.redeemCollateral(
-              selectedCurrency.id.toUpperCase(), // ส่งชื่อสกุลเงิน เช่น "CNY_CBDC", "RUB_CBDC"
-              ethers.parseUnits(amount, 2)
-          );
-          */
-          //await redeemTx.wait();
-  
-          alert(`Redeem successful! You received ${collateralAmount.toFixed(2)} ${selectedCurrency.label}.`);
-          window.location.reload();
-      } catch (error) {
-          console.error("Error during redeem:", error);
-          alert("Something went wrong. Please try again.");
-      }
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+        
+            const bricsContract = new ethers.Contract(BRICS, BRICS_ABI, signer);
+            const userAddress = await signer.getAddress();
+
+            // ตรวจสอบยอดคงเหลือ BRICS ใน Wallet
+            const balance = await bricsContract.balanceOf(userAddress);
+            const balanceInDecimal = ethers.formatUnits(balance, 2); // 2 decimals
+
+            if (Number(amount) > Number(balanceInDecimal)) {
+                alert(`Insufficient BRICS balance. You only have ${balanceInDecimal} BRICS.`);
+                return;
+            }
+
+            const selectedCurrency = toCurrencies.find((c) => c.id === toCurrency);
+            if (!selectedCurrency) {
+                alert("Invalid currency selected.");
+                return;
+            }
+
+            const collateralAmount = calculateCollateralToReceive();
+
+            console.log("Redeem Amount (BRICS):", amount);
+            console.log("Collateral Amount to Receive:", collateralAmount);
+
+            // ********************* ยังไม่มี dialog wating (Loading) *********************
+
+            const amountInWei = ethers.parseUnits(amount, 2); // 2 decimals for the example
+            console.log("amountInWei:", amountInWei);
+
+            const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+            const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amountInWei);
+            await redeemTx.wait();
+
+            alert(`Redeem successful! You received ${collateralAmount.toFixed(2)} ${selectedCurrency.label}.`);
+            window.location.reload();
+        } catch (error) {
+            console.error("Error during redeem:", error);
+            alert("Something went wrong. Please try again.");
+        }
   };
   
   
-
     const handleAmountChange = (e) => {
         setAmount(e.target.value);
     };
@@ -204,15 +188,23 @@ export default function ExchangeModule() {
             </div>
 
             {amount && (
-              <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                  <div className="text-sm text-gray-600">Collateral to Receive</div>
-                  <div className="font-semibold">
-                      {new Intl.NumberFormat('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }).format(estimateCollateralToReceive)} {toCurrencies.find(c => c.id === toCurrency)?.label}
-                  </div>
-              </div>
+                <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                    <div className="text-sm text-gray-600">Estimated Rate</div>
+                    <div className="font-semibold mb-2">
+                    1 BRICS = {exchangeRate.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    </div>
+
+                    <div className="text-sm text-gray-600 mt-2">Steps of Calculation</div>
+                    <div className="text-sm">
+                    -  collateral = {amount} /  {exchangeRate.toFixed(2)} ≈ {collateralDetails.preFloor.toFixed(2)}
+                    </div>
+                    <div className="text-sm">
+                    - จำนวนเงินค้ำประกันหลังปัดเศษ: {collateralDetails.postFloor} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    </div>
+                    <div className="font-semibold mt-2">
+                    Estimated redeem: {collateralDetails.postFloor.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    </div>
+                </div>
             )}
         </div>
         </div>
