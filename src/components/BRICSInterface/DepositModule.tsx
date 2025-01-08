@@ -17,9 +17,9 @@ const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
 
 const currencies = [
-  { id: "cny", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
-  { id: "rub", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
-  { id: "inr", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
+  { id: "CNY", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
+  { id: "RUB", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
+  { id: "INR", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
   //{ id: "brl", name: "Digital Real", label: "Digital Real" },
   //{ id: "zar", name: "Digital Rand", label: "Digital Rand" },
   //{ id: "brs", name: "BRICS", label: "BRICS Stablecoin" }
@@ -27,38 +27,90 @@ const currencies = [
 
 const toCurrencies = [
     { id: "brs", name: "BRICS", label: "BRICS Stablecoin", address:BRICS }
-  ];
-
-// wait get from smart contract.
-const collateralRatio = 120; // Collateralization Ratio in percentage
-
-/*
-Smart contract
-cny :1000
-rub 69
-inr 12
-*/
-const exchangeRates = {
-  cny: 26,    // 1 BRICS = 0.26 CNY -> scaled by 100
-  rub: 377,   // 1 BRICS = 3.77 RUB -> scaled by 100
-  inr: 302    // 1 BRICS = 3.02 INR -> scaled by 100
-};
-
-const currencyWeights = {
-    cny: 20,     
-    rub: 50, 
-    inr: 30, 
-};
+];
 
 export default function ExchangeModule() {
+    const [initialized, setInitialized] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [amount, setAmount] = useState("");
     const [estimatedBRICS, setEstimatedBRICS] = useState(0);
     const [details, setDetails] = useState({ preCR: 0, postCR: 0 });
-   
-    const exchangeRate = exchangeRates[fromCurrency] || 1 ;
+    const [collateralRatio, setCollateralRatio] = useState(120);
+    const [exchangeDetails, setExchangeDetails] = useState([]);
+    const [baseRate, setBaseRate] = useState(null); // อัตราแลกเปลี่ยน 1 BRICS = ? CNY
+    const [exchangeRates, setExchangeRates] = useState(1); // อัตราแลกเปลี่ยน 1 BRICS = ? CNY
+    const [exchangeRate, setExchangeRate] = useState(1);
     
+    
+    const fetchCR= async () => {
+        try {
+          if (!window.ethereum) {
+            throw new Error("No crypto wallet found");
+          }
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+         
+          const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+          const CR = await vaultContract.getCollateralRatio();
+          
+          setCollateralRatio(Number(CR));
+          
+        } catch (err: any) {
+          console.error("Error fetching balances:", err);
+          setError(err.message || "Failed to fetch balances");
+        }
+    };
+      
+    const fetchEexchangeRates= async () => {
+        try {
+          if (!window.ethereum) {
+            throw new Error("No crypto wallet found");
+          }
+    
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+         
+          const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+          const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
+          const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+    
+          setBaseRate(baseRateFormatted);
+    
+          const details = [];
+          const detailEX = [];
+          for (const currency of currencies) {
+            const rateBigInt = await vaultContract.getExchangeRate(currency.id);
+            const rateFormatted = Number(rateBigInt) / 100;
+    
+            const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
+          
+            details.push({
+              label: currency.label,
+              id: currency.id,
+              rate: rateFormatted,
+              bricsToCurrency
+            });
+
+            detailEX.push(rateFormatted);
+             
+          }
+          setExchangeDetails(details);
+         
+          setExchangeRates(
+            {
+                CNY: detailEX[0] * 100,    // 1 BRICS = 0.26 CNY -> scaled by 100
+                RUB: detailEX[1] * 100,   // 1 BRICS = 3.77 RUB -> scaled by 100
+                INR: detailEX[2] * 100    // 1 BRICS = 3.02 INR -> scaled by 100
+            }
+          )
+        } catch (err: any) {
+          console.error("Error fetching balances:", err);
+          setError(err.message || "Failed to fetch balances");
+        }
+    };
+
     const calculateEstimatebricsMinted = () => {
         if (!amount || !fromCurrency) return { preCR: 0, postCR: 0 }
 
@@ -71,13 +123,21 @@ export default function ExchangeModule() {
     }
 
     useEffect(() => {
+        if (!initialized) {
+            fetchCR();
+            fetchEexchangeRates();
+            setInitialized(true);
+        }
+    }, [initialized]);
+
+    useEffect(() => {
+        setExchangeRate(exchangeRates[fromCurrency]) ;
         const { preCR, postCR } = calculateEstimatebricsMinted();
 
         setEstimatedBRICS(postCR);
         setDetails({ preCR, postCR });
-
+        
     }, [amount, fromCurrency]);
-
 
     const handleDeposit = async () => {
         if (!amount) {
@@ -101,7 +161,7 @@ export default function ExchangeModule() {
             // แปลงจำนวนเงินเป็นหน่วยที่มี 2 ทศนิยม
             const amountInWei = ethers.parseUnits(amount, 2); 
 
-            if(selectedCurrency.id == 'cny')
+            if(selectedCurrency.id == 'CNY')
             {
                 const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
                 
@@ -109,7 +169,7 @@ export default function ExchangeModule() {
                 const approveTx = await contract_CNY.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
-            else if (selectedCurrency.id == 'rub')
+            else if (selectedCurrency.id == 'RUB')
             {
                 const contract_RUB = new ethers.Contract(RUB_CBDC, RUB_CBDC_ABI, signer);
 
@@ -117,7 +177,7 @@ export default function ExchangeModule() {
                 const approveTx = await contract_RUB.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
-            else if (selectedCurrency.id == 'inr')
+            else if (selectedCurrency.id == 'INR')
             {
                 const contract_INR = new ethers.Contract(INR_CBDC, INR_CBDC_ABI, signer);
 

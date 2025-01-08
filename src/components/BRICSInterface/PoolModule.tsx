@@ -57,13 +57,14 @@ export default function PoolModule() {
       
           // Call getAllPoolsAvailability
           const [poolNames, reserves0, reserves1, isAvailable] = await poolContract.getAllPoolsAvailability();
-      
+          /*
           console.log({
             poolNamesLength: poolNames.length,
             reserves0Length: reserves0.length,
             reserves1Length: reserves1.length,
             isAvailableLength: isAvailable.length,
           });
+          */
       
           // Align array lengths
           const minLength = Math.min(

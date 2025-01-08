@@ -14,20 +14,21 @@ contract BRICSVaultV2 is ERC4626 {
         IERC20 asset;
         uint256 exchangeRate; // Scaled by 100 (2 decimal places)
     }
-
     mapping(string => VaultInfo) public vaults;
     mapping(address => mapping(string => uint256)) public userDeposits; // Tracks deposits by user and token symbol
     mapping(string => uint256) public currencyWeights; // Weight of each currency in BRICS
+    mapping(address => uint256) public userMintedBRICS; // Tracks total BRICS minted by each user
     mapping(string => uint256) public totalDeposits;
 
-    uint256 public collateralRatio = 120; // 120%
-    address public vaultWalletAddress;
+    uint256 public collateralRatio = 120;   // 120% กำหนดอัตราส่วนขั้นต่ำของ หลักประกัน ที่ผู้ใช้ต้องใส่เมื่อ Mint BRICS
+    uint256 public liquidationRatio = 120;  // 120% กำหนดอัตราส่วนที่ต่ำที่สุดก่อนที่ระบบจะบังคับ Liquidation เพื่อป้องกันความเสี่ยง
+
+    address public vaultWalletAddress; // treasury
     //address public constant CNY = 0xd37BaD73F63e3725d364B65717d1c18e5186296f; // Used on Test network.
-    address public constant CNY = 0x928C0221CA29E42d1b3f820c8B3C43e5A3bF65Ef; // Repalce for test(local)
+    address public constant CNY = 0xd37BaD73F63e3725d364B65717d1c18e5186296f; // Repalce for test(local)
     address public constant RUB = 0x9876EEAf962ADfc612486C5D54BCb9D8B5e50878; // Used on Test network.
     address public constant INR = 0xe3077475D1219088cD002B75c8bB46567D7F37ae; // Used on Test network.
 
-    // 0 
     constructor(IERC20 _asset) ERC4626(_asset) ERC20("BRICS", "vBRICS") {
         vaultWalletAddress = msg.sender;
 
@@ -67,11 +68,11 @@ contract BRICSVaultV2 is ERC4626 {
         collateralRatio = _ratio;
     }
 
-    function getCollateralRatio() public view returns (uint256 currentCollateralRatio) {
-        currentCollateralRatio = collateralRatio;
+    function setLiquidationRatio(uint256 _ratio) external onlyAdmin {
+        require(_ratio >= 100, "Liquidation ratio must be at least 100%");
+        liquidationRatio = _ratio;
     }
 
-    // Set exchange rate (only admin)
     function setExchangeRate(string memory symbol, uint256 rate) external onlyAdmin {
         require(rate > 0, "Rate must be greater than 0");
         require(address(vaults[symbol].asset) != address(0), "Token not supported");
@@ -79,17 +80,19 @@ contract BRICSVaultV2 is ERC4626 {
         vaults[symbol].exchangeRate = rate;
     }
 
+    function getCollateralRatio() public view returns (uint256 currentCollateralRatio) {
+        currentCollateralRatio = collateralRatio;
+    }
     function getExchangeRate(string memory symbol) external view returns (uint256) {
         require(address(vaults[symbol].asset) != address(0), "Currency not supported");
         return vaults[symbol].exchangeRate;
     }
-
+    /*  comment for limit bytes
     function addTokenVault(string memory symbol, IERC20 _asset, uint256 _exchangeRate) external {
         require(msg.sender == vaultWalletAddress, "Only admin can add token");
         require(address(vaults[symbol].asset) == address(0), "Token already added");
         require(_exchangeRate > 0, "Exchange rate must be greater than 0");
 
-        //Only
         require(
             keccak256(bytes(symbol)) == keccak256(bytes("CNY")) ||
             keccak256(bytes(symbol)) == keccak256(bytes("RUB")) ||
@@ -102,19 +105,10 @@ contract BRICSVaultV2 is ERC4626 {
             exchangeRate: _exchangeRate // 0.069 
         });
     }
-   
-    
+    */
    
     // 1.1
-    /*
-        uint256;
-        weights[0] = 20;
-        weights[1] = 50;
-        weights[2] = 30;
-        
-        ["CNY","RUB","INR"]
-        [20,50,30]
-    */
+    /* comment for limit bytes
     function setupCurrencyWeights(string[] memory symbols, uint256[] memory weights) external {
         require(msg.sender == vaultWalletAddress, "Only admin can setup weights");
         require(symbols.length == 3, "Must provide exactly 3 currencies");
@@ -141,14 +135,12 @@ contract BRICSVaultV2 is ERC4626 {
         require(totalWeight == 100, "Total weight must equal 100%");
     }
 
-
-    // Must be equal 100%
     function getTotalWeights() public view returns (uint256 cnyWeight, uint256 rubWeight, uint256 inrWeight) {
         cnyWeight = currencyWeights["CNY"];
         rubWeight = currencyWeights["RUB"];
         inrWeight = currencyWeights["INR"];
     }
-
+    */
     // 3.     Deposit collateral and mint BRICS tokens
     /*
     20241226 used.
@@ -181,6 +173,8 @@ contract BRICSVaultV2 is ERC4626 {
 
         // Mint BRICS ให้ผู้ใช้ (หลังหักค่าธรรมเนียม)
         IERC20Mintable(address(vaults["BRICS"].asset)).mint(msg.sender, maxMintableBRICS);
+
+        userMintedBRICS[msg.sender] += maxMintableBRICS;
     }
 
     function previewDepositCollateral(string memory symbol, uint256 amount) public view returns (uint256 maxMintableBRICS) {
@@ -252,66 +246,73 @@ contract BRICSVaultV2 is ERC4626 {
         collateralAmount = (bricsAmount * exchangeRate) / 100;
     }
 
-
-
-    // ตรวจสอบ Effective Ratio และบังคับถอนหากต่ำกว่า 100%
-    function checkAndForceWithdraw(address user, string memory symbol) public onlyAdmin {
-        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
-        
+    function getEffectiveRatio(address user, string memory symbol) public view returns (uint256) {
         uint256 userDepositBalance = userDeposits[user][symbol];
-        require(userDepositBalance > 0, "No collateral to check");
+        uint256 userBRICSMinted = userMintedBRICS[user];
+        uint256 exchangeRate = vaults[symbol].exchangeRate;
 
-        VaultInfo storage vault = vaults[symbol];
-        uint256 exchangeRate = vault.exchangeRate;
-
-        // คำนวณ Effective Ratio ของผู้ใช้
         uint256 collateralValue = (userDepositBalance * 100) / exchangeRate;
-        uint256 effectiveRatio = (collateralValue * 100) / collateralRatio;
-
-        if (effectiveRatio < 100) {
-            forcedWithdraw(user, symbol);
-        }
+        return (collateralValue * 100) / userBRICSMinted;
     }
-        
-    // ฟังก์ชันบังคับถอน (Forced Withdraw) เมื่อ Effective Ratio ต่ำกว่า 100%
-    function forcedWithdraw(address user, string memory symbol) public onlyAdmin {
+
+    function liquidate(address user, string memory symbol) external onlyAdmin {
         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
-        
+
         uint256 userDepositBalance = userDeposits[user][symbol];
-        require(userDepositBalance > 0, "No collateral to withdraw");
+        require(userDepositBalance > 0, "No collateral to liquidate");
 
-        VaultInfo storage vault = vaults[symbol];
-        uint256 exchangeRate = vault.exchangeRate;
+        uint256 bricsMinted = userMintedBRICS[user];
+        uint256 exchangeRate = vaults[symbol].exchangeRate;
 
-        // คำนวณจำนวน BRICS ที่ต้อง Burn
-        uint256 bricsAmount = (userDepositBalance * 100) / exchangeRate;
+        // คำนวณมูลค่าหลักประกันจริงตาม Exchange Rate ปัจจุบัน
+        uint256 actualCollateralValue = (userDepositBalance * 100) / exchangeRate;
 
-        // Burn BRICS จากผู้ใช้
-        _burn(user, bricsAmount);
-        IERC20Mintable(address(vaults["BRICS"].asset)).burn(user, bricsAmount);
+        // คำนวณมูลค่าหลักประกันที่ต้องมี
+        uint256 requiredCollateralValue = (bricsMinted * liquidationRatio) / 100;
 
-        // โอนหลักประกันคืนให้ผู้ใช้
-        vault.asset.transfer(user, userDepositBalance);
+        require(actualCollateralValue < requiredCollateralValue, "No deficit to liquidate");
+
+        // คำนวณส่วนที่ขาดของหลักประกัน
+        uint256 deficitCollateralValue = requiredCollateralValue - actualCollateralValue;
+
+        // คำนวณจำนวนโทเค็นที่ต้อง Liquidate
+        uint256 tokensToLiquidate = (deficitCollateralValue * exchangeRate) / 100;
+
+        require(tokensToLiquidate <= userDepositBalance, "Not enough collateral to liquidate");
+
+        // โอนหลักประกันที่ต้อง Liquidate ไปยัง vaultWalletAddress
+        vaults[symbol].asset.transfer(vaultWalletAddress, tokensToLiquidate);
 
         // อัปเดตยอดเงินฝากของผู้ใช้
-        userDeposits[user][symbol] = 0;
+        userDeposits[user][symbol] -= tokensToLiquidate;
+        totalDeposits[symbol] -= tokensToLiquidate;
     }
 
-    // Preview forced withdraw: คำนวณจำนวนหลักประกันและ BRICS ที่ต้อง Burn
-    function previewForcedWithdraw(address user, string memory symbol) public view returns (uint256 collateralAmount, uint256 bricsAmount) {
-        require(address(vaults[symbol].asset) != address(0), "Unsupported token");
+    function previewLiquidate(address user, string memory symbol) public view returns (uint256 bricsMinted, uint256 actualCollateralValue, uint256 requiredCollateralValue, uint256 deficitCollateralValue,  uint256 tokensToLiquidate) {
+         require(address(vaults[symbol].asset) != address(0), "Unsupported token");
 
         uint256 userDepositBalance = userDeposits[user][symbol];
-        require(userDepositBalance > 0, "No collateral to withdraw");
+        require(userDepositBalance > 0, "No collateral to liquidate");
 
-        VaultInfo storage vault = vaults[symbol];
-        uint256 exchangeRate = vault.exchangeRate;
+        bricsMinted = userMintedBRICS[user];
+        uint256 exchangeRate = vaults[symbol].exchangeRate;
 
-        // คำนวณจำนวน BRICS ที่ต้อง Burn
-        bricsAmount = (userDepositBalance * 100) / exchangeRate;
+        // คำนวณมูลค่าหลักประกันจริงตาม Exchange Rate ปัจจุบัน
+         actualCollateralValue = (userDepositBalance * 100) / exchangeRate;
 
-        // จำนวนหลักประกันทั้งหมดที่จะคืนให้ผู้ใช้
-        collateralAmount = userDepositBalance;
+        // คำนวณมูลค่าหลักประกันที่ต้องมี
+        requiredCollateralValue = (bricsMinted * liquidationRatio) / 100;
+        
+        deficitCollateralValue  = 0;
+        if (actualCollateralValue >= requiredCollateralValue) {
+            tokensToLiquidate = 0; // ไม่มีส่วนที่ขาด
+        } else {
+            // คำนวณส่วนที่ขาดของหลักประกัน
+            deficitCollateralValue = requiredCollateralValue - actualCollateralValue;
+
+            // คำนวณจำนวนโทเค็นที่ต้อง Liquidate
+            tokensToLiquidate = (deficitCollateralValue * exchangeRate) / 100;
+        }
     }
 }
 

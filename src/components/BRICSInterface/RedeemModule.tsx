@@ -17,56 +17,123 @@ const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
 
 const toCurrencies = [
-  { id: "cny", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
-  { id: "rub", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
-  { id: "inr", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
+  { id: "CNY", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
+  { id: "RUB", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
+  { id: "INR", name: "INR_CBDC", label: "Digital Rupee", address:INR_CBDC },
   //{ id: "brl", name: "Digital Real", label: "Digital Real" },
   //{ id: "zar", name: "Digital Rand", label: "Digital Rand" },
   //{ id: "brs", name: "BRICS", label: "BRICS Stablecoin" }
 ];
 
 const currencies = [
-    { id: "brs", name: "BRICS", label: "BRICS Stablecoin", address:BRICS }
+    { id: "BRICS", name: "BRICS", label: "BRICS Stablecoin", address:BRICS }
   ];
-
-// wait get from smart contract.
-
-const exchangeRates = {
-    cny: 3.84,   // 1 CNY ≈ 3.84 BRICS
-    rub: 0.265,  // 1 RUB ≈ 0.265 BRICS
-    inr: 0.331   // 1 INR ≈ 0.331 BRICS
-};
-
-const currencyWeights = {
-    cny: 20,     
-    rub: 50, 
-    inr: 30, 
-};
-
-const collateralRatio = 120; // Collateralization Ratio in percentage
 
 
 export default function ExchangeModule() {
+    const [initialized, setInitialized] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [toCurrency, setToCurrency] = useState(toCurrencies[0].id);
     const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
     const [amount, setAmount] = useState("");
     const [collateralDetails, setCollateralDetails] = useState({ preFloor: 0, postFloor: 0 });
+    const [collateralRatio, setCollateralRatio] = useState(120);
+    const [exchangeDetails, setExchangeDetails] = useState([]);
+    const [baseRate, setBaseRate] = useState(null); // อัตราแลกเปลี่ยน 1 BRICS = ? CNY
+    const [exchangeRates, setExchangeRates] = useState(1); // อัตราแลกเปลี่ยน 1 BRICS = ? CNY
+    const [exchangeRate, setExchangeRate] = useState(1);
+ 
 
-    // อัตราแลกเปลี่ยน
-    const exchangeRate = exchangeRates[toCurrency] || 1;
+    const fetchCR= async () => {
+        try {
+          if (!window.ethereum) {
+            throw new Error("No crypto wallet found");
+          }
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+         
+          const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+          const CR = await vaultContract.getCollateralRatio();
+          
+          setCollateralRatio(Number(CR));
+          
+        } catch (err: any) {
+          console.error("Error fetching balances:", err);
+          setError(err.message || "Failed to fetch balances");
+        }
+    };
+      
+    const fetchEexchangeRates= async () => {
+        try {
+          if (!window.ethereum) {
+            throw new Error("No crypto wallet found");
+          }
+    
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+         
+          const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+          const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
+          const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+    
+          setBaseRate(baseRateFormatted);
+    
+          const details = [];
+          const detailEX = [];
+          for (const currency of toCurrencies) {
+            const rateBigInt = await vaultContract.getExchangeRate(currency.id);
+            const rateFormatted = Number(rateBigInt) / 100;
+    
+            const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
+          
+            details.push({
+              label: currency.label,
+              id: currency.id,
+              rate: rateFormatted,
+              bricsToCurrency
+            });
 
-    const calculateCollateralToReceive = () => {
+            detailEX.push(rateFormatted);
+          }
+          setExchangeDetails(details);
+         
+          setExchangeRates(
+            {
+                CNY: detailEX[0],    // 1 BRICS = 0.26 CNY -> scaled by 100
+                RUB: detailEX[1],   // 1 BRICS = 3.77 RUB -> scaled by 100
+                INR: detailEX[2]    // 1 BRICS = 3.02 INR -> scaled by 100
+            }
+          );
+          
+        } catch (err: any) {
+          console.error("Error fetching balances:", err);
+          setError(err.message || "Failed to fetch balances");
+        }
+    };
+
+    const calculateCollateralToReceive =  () => {
         if (!amount || !toCurrency) return { preFloor: 0, postFloor: 0 };
-
+      
         const exchangeRateLocal = exchangeRates[toCurrency] || 1;
+       
         const bricsAmount = Number(amount);
-        const collateralPreFloor = bricsAmount / exchangeRateLocal; // จำนวนเงินค้ำประกันก่อนปัดเศษ
+        const collateralPreFloor = bricsAmount * exchangeRateLocal; // จำนวนเงินค้ำประกันก่อนปัดเศษ
         const collateralPostFloor = Math.floor(collateralPreFloor); // ปัดเศษลงเป็นจำนวนเต็ม
-
+    
         return { preFloor: collateralPreFloor, postFloor: collateralPostFloor };
+
     };
   
     useEffect(() => {
+        if (!initialized) {
+            fetchCR();
+            fetchEexchangeRates();
+            setInitialized(true);
+        }
+    }, [initialized])
+
+    useEffect(() => {
+        setExchangeRate(exchangeRates[toCurrency]) ;
         const details = calculateCollateralToReceive();
         setCollateralDetails(details);
     }, [amount, toCurrency]);
@@ -103,10 +170,10 @@ export default function ExchangeModule() {
                 return;
             }
 
-            const collateralAmount = calculateCollateralToReceive();
-
+            const collateralDetails = calculateCollateralToReceive();
+          
             console.log("Redeem Amount (BRICS):", amount);
-            console.log("Collateral Amount to Receive:", collateralAmount);
+            console.log("Collateral Amount to Receive:",   collateralDetails.postFloor);
 
             // ********************* ยังไม่มี dialog wating (Loading) *********************
 
@@ -117,13 +184,13 @@ export default function ExchangeModule() {
             const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amountInWei);
             await redeemTx.wait();
 
-            alert(`Redeem successful! You received ${collateralAmount.toFixed(2)} ${selectedCurrency.label}.`);
+            alert(`Redeem successful! You received ${  collateralDetails.postFloor} ${selectedCurrency.label}.`);
             window.location.reload();
         } catch (error) {
             console.error("Error during redeem:", error);
             alert("Something went wrong. Please try again.");
         }
-  };
+    };
   
   
     const handleAmountChange = (e) => {
@@ -191,18 +258,18 @@ export default function ExchangeModule() {
                 <div className="bg-gray-50 p-4 rounded-lg mt-4">
                     <div className="text-sm text-gray-600">Estimated Rate</div>
                     <div className="font-semibold mb-2">
-                    1 BRICS = {exchangeRate.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    1 BRICS = {exchangeRate} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
 
                     <div className="text-sm text-gray-600 mt-2">Steps of Calculation</div>
                     <div className="text-sm">
-                    -  collateral = {amount} /  {exchangeRate.toFixed(2)} ≈ {collateralDetails.preFloor.toFixed(2)}
+                    -  collateral = {amount} /  {exchangeRate} ≈ {collateralDetails.preFloor}
                     </div>
                     <div className="text-sm">
                     - จำนวนเงินค้ำประกันหลังปัดเศษ: {collateralDetails.postFloor} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
                     <div className="font-semibold mt-2">
-                    Estimated redeem: {collateralDetails.postFloor.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    Estimated redeem: {collateralDetails.postFloor} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
                 </div>
             )}

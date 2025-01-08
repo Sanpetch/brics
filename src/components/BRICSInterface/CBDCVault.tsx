@@ -19,7 +19,6 @@ const INR_CBDC = process.env.NEXT_PUBLIC_CBDC_INR_ADDRESS;
 const RUB_CBDC = process.env.NEXT_PUBLIC_CBDC_RUB_ADDRESS;
 const BRICS    = process.env.NEXT_PUBLIC_BRICS_ADDRESS;
 
-
 const currencies = [
   { id: "CNY", name: "CNY_CBDC", label: "Digital Yuan", address:CNY_CBDC },
   { id: "RUB", name: "RUB_CBDC", label: "Digital Ruble", address:RUB_CBDC },
@@ -43,6 +42,7 @@ export default function CBDCPools() {
   const [balances, setBalances] = useState<{ [address: string]: string }>({}); // Store balances
   const [error, setError] = useState<string | null>(null);
   const [balanceOfBRICS, setbalanceOfBRICS] = useState(false);
+  const [mintedOfBRICSbyUser, setMintedOfBRICSbyUser] = useState(false);
   const [statusMessages, setStatusMessages] = useState([]);
   const [collateralRatio, setCollateralRatio] = useState(120);
   const [exchangeDetails, setExchangeDetails] = useState([]);
@@ -99,6 +99,14 @@ export default function CBDCPools() {
         maximumFractionDigits: 2,
       }).format(Number(formattedBalanceBRICS));
       setbalanceOfBRICS(balanceBIRCS);
+
+      const rawMintedOfBRICSbyUser = await vaultContract.userMintedBRICS(accountData?.address);
+      const formattedMintedOfBRICSbyUser = ethers.formatUnits(rawMintedOfBRICSbyUser, decimalsBRICS);
+      const balanceMintedBIRCS = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(formattedMintedOfBRICSbyUser));
+      setMintedOfBRICSbyUser(balanceMintedBIRCS);
 
       const balances: { [address: string]: string } = {};
       balances[CNY_CBDC] = new Intl.NumberFormat("en-US", {
@@ -198,6 +206,88 @@ export default function CBDCPools() {
     }
   };
 
+  const handlePreviewLiquidate = async () => {
+    try {
+      if (!window.ethereum) {
+        throw new Error("No crypto wallet found");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+
+      const previewMessages = [];
+
+      for (const currency of currencies) {
+        const result = await vaultContract.previewLiquidate(accountData?.address, currency.id);
+        if(result)
+        {
+          /*
+          const bricsMintedBigInt = result[0];
+          const actualCollateralValueBigInt = result[1];
+          const requiredCollateralValueBigInt = result[2];
+          const deficitCollateralValueBigInt = result[3];
+          const tokensToLiquidateBigInt = result[4];
+
+          const bricsMinted = Number(bricsMintedBigInt);
+          const actualCollateralValue = Number(actualCollateralValueBigInt);
+          const requiredCollateralValue = Number(requiredCollateralValueBigInt);
+          const deficitCollateralValue = Number(deficitCollateralValueBigInt);
+          const tokensToLiquidate = Number(tokensToLiquidateBigInt);
+          */
+          const tokensToLiquidate = Number(result[4]);
+          console.log(tokensToLiquidate);
+          if (tokensToLiquidate > 0) {
+            previewMessages.push({
+              symbol: currency.id,
+              status: "Warning",
+              message: `You need to liquidate ${tokensToLiquidate/100} ${currency.label} tokens due to insufficient collateral.`,
+              currency
+            });
+          } else {
+            previewMessages.push({
+              symbol: currency.id,
+              status: "OK",
+              message: `${currency.label} is maintaining optimal ratios.`,
+            });
+          }
+        }
+
+        setStatusMessages(previewMessages);
+      }
+
+      } catch (error) {
+        //console.error("Error previewing liquidation:", error);
+        //alert("Failed to preview liquidation. Please try again.");
+      }
+  };
+
+  const handleLiquidate = async (currency) => {
+    try {
+      if (!window.ethereum) {
+        throw new Error("No crypto wallet found");
+      }
+  
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+      
+      console.log(currency.id);
+      console.log(accountData?.address);
+      // Call liquidate function
+      const tx = await vaultContract.liquidate(accountData?.address, currency.id);
+      await tx.wait(); // Wait for transaction confirmation
+  
+      alert(`Successfully liquidated ${currency.label} tokens.`);
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Error during liquidation:", error);
+      alert("Failed to perform liquidation. Please try again.");
+    }
+  };
+
+
   const checkSystemStatus = async () => {
     try {
       if (!window.ethereum) {
@@ -213,19 +303,12 @@ export default function CBDCPools() {
      
       for (const currency of currencies) {
         const exchangeRateBigInt = await vaultContract.getExchangeRate(currency.id);
-        const exchangeRate = Number(exchangeRateBigInt); // แปลง BigInt เป็น number
-
+        const exchangeRate = Number(exchangeRateBigInt) / 100; // แปลง BigInt เป็น number
+        console.log(exchangeRate);
         // Convert the exchange rate to a percentage for easier comparison
         const effectiveRatio = (100 * exchangeRate) / collateralRatioBigInt;
-        console.log("effectiveRatio: " + effectiveRatio);
-        /*
-          if (effectiveRatio < 100) มีจุดประสงค์เพื่อ ตรวจสอบว่าอัตราส่วน (Effective Ratio) ต่ำกว่าค่า Collateral Ratio (CR) หรือไม่ ซึ่งเป็นแนวคิดสำคัญในระบบที่ใช้ Over-collateralization
-          
-          Effective Ratio คืออัตราส่วนที่คำนวณได้จากอัตราแลกเปลี่ยนปัจจุบันของหลักประกันเทียบกับจำนวน
-          Effective Ratio = (มูลค่าหลักประกันปัจจุบัน / จำนวน BRICS ที่สร้างขึ้น) * 100      
-            
-          หาก Effective Ratio ต่ำกว่า 100% หมายความว่ามูลค่าหลักประกันไม่เพียงพอที่จะครอบคลุม BRICS ที่สร้างขึ้น ซึ่งถือว่าเป็นสถานการณ์ที่มีความเสี่ยง
-        */
+        //console.log("effectiveRatio: " + effectiveRatio);
+        
         if (effectiveRatio < 100) {
           messages.push({
             symbol: currency.symbol,
@@ -252,15 +335,15 @@ export default function CBDCPools() {
   useEffect(() => {
     if (accountData?.address) {
       fetchBalances();
+      handlePreviewLiquidate();
     }
-    //fetchCR();
+    fetchCR();
   }, [accountData]);
 
   useEffect(() => {
     if (!initialized) {
       setCollateralRatio(120);
       fetchEexchangeRates();
-      checkSystemStatus();
       setInitialized(true);
     }
   }, [initialized]);
@@ -269,7 +352,7 @@ export default function CBDCPools() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">WALLET</h2>
+            <h2 className="text-xl font-semibold">BRICS Token</h2>
             <Building2 className="text-blue-600 w-6 h-6" />
         </div>
         <div className="space-y-3">
@@ -277,14 +360,18 @@ export default function CBDCPools() {
             className="flex items-center justify-between p-2 bg-gray-50 rounded"
             >
                 <div>
-                    <div className="font-medium">BRICS</div>
-                    <div className="text-sm text-gray-500">BRICS Token</div>
+                    <div className="text-sm text-gray-500 font-medium">Wallet</div>
+                    <div className="text-sm text-gray-500 font-medium">Vault</div>
                 </div>
                 <div className="text-right">
-                    <div className="font-medium">
-                    {balanceOfBRICS || 0.00} Tokens
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                      {balanceOfBRICS || 0.00} Tokens
+                      </div>
+                      <div className="text-sm font-medium">
+                      {mintedOfBRICSbyUser || 0.00} Tokens
+                      </div>
                     </div>
-                    <div className="text-sm text-green-600">Active</div>
                 </div>
             </div>
         </div>
@@ -345,16 +432,30 @@ export default function CBDCPools() {
               >
                 <AlertTitle>{status.status === "Warning" ? "Warning" : ""}</AlertTitle>
                 <AlertDescription>{status.message}</AlertDescription>
-              </Alert>
+                {status.status === "Warning" && (
+                  <button
+                    className="w-full bg-red-600 text-white rounded-lg p-3 hover:bg-red-700 transition-colors mt-2"
+                    onClick={() => handleLiquidate(status.currency)} // ส่ง currency เข้าไปในฟังก์ชัน
+                  >
+                    Force Liquidation
+                  </button>
+                )}
+                </Alert>
             ))}
+
+
+      
           </div>
+
         </div>
         )}  
+       
 
+    
         <div className="pt-4">
           <button
             className="w-full bg-blue-600 text-white rounded-lg p-3 hover:bg-blue-700 transition-colors"
-            onClick={checkSystemStatus}
+            onClick={handlePreviewLiquidate}
           >
             Check Status
         </button>

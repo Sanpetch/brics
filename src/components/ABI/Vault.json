@@ -2,29 +2,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "contract IERC20",
-				"name": "_asset",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_exchangeRate",
-				"type": "uint256"
-			}
-		],
-		"name": "addTokenVault",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "address",
 				"name": "spender",
 				"type": "address"
@@ -60,30 +37,6 @@
 			}
 		],
 		"name": "deposit",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "shares",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "receiver",
-				"type": "address"
-			}
-		],
-		"name": "mint",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -363,6 +316,48 @@
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
+		"name": "liquidate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "shares",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			}
+		],
+		"name": "mint",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "shares",
 				"type": "uint256"
@@ -410,6 +405,19 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "_ratio",
+				"type": "uint256"
+			}
+		],
+		"name": "setCollateralRatio",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "string",
 				"name": "symbol",
 				"type": "string"
@@ -428,17 +436,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string[]",
-				"name": "symbols",
-				"type": "string[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "weights",
-				"type": "uint256[]"
+				"internalType": "uint256",
+				"name": "_ratio",
+				"type": "uint256"
 			}
 		],
-		"name": "setupCurrencyWeights",
+		"name": "setLiquidationRatio",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -645,19 +648,6 @@
 	},
 	{
 		"inputs": [],
-		"name": "calculateBRICSValueInCNY",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "CNY",
 		"outputs": [
 			{
@@ -782,6 +772,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "getCollateralRatio",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "currentCollateralRatio",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "string",
@@ -790,6 +793,30 @@
 			}
 		],
 		"name": "getContractBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
+		"name": "getEffectiveRatio",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -839,29 +866,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "getTotalWeights",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "cnyWeight",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "rubWeight",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "inrWeight",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -893,6 +897,19 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "liquidationRatio",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -1023,7 +1040,51 @@
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "bricsToMint",
+				"name": "maxMintableBRICS",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
+		"name": "previewLiquidate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "bricsMinted",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "actualCollateralValue",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "requiredCollateralValue",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "deficitCollateralValue",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokensToLiquidate",
 				"type": "uint256"
 			}
 		],
@@ -1196,6 +1257,25 @@
 			}
 		],
 		"name": "userDeposits",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "userMintedBRICS",
 		"outputs": [
 			{
 				"internalType": "uint256",
