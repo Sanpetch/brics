@@ -74,7 +74,7 @@ export default function ExchangeModule() {
          
           const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
           const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
-          const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+          const baseRateFormatted = Number(baseRateBigInt) / 10000; // แปลงจาก BigInt และปรับทศนิยม
     
           setBaseRate(baseRateFormatted);
     
@@ -82,7 +82,7 @@ export default function ExchangeModule() {
           const detailEX = [];
           for (const currency of currencies) {
             const rateBigInt = await vaultContract.getExchangeRate(currency.id);
-            const rateFormatted = Number(rateBigInt) / 100;
+            const rateFormatted = Number(rateBigInt) / 10000;
     
             const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
           
@@ -100,9 +100,9 @@ export default function ExchangeModule() {
          
           setExchangeRates(
             {
-                CNY: detailEX[0] * 100,    // 1 BRICS = 0.26 CNY -> scaled by 100
-                RUB: detailEX[1] * 100,   // 1 BRICS = 3.77 RUB -> scaled by 100
-                INR: detailEX[2] * 100    // 1 BRICS = 3.02 INR -> scaled by 100
+                CNY: detailEX[0] * 10000,    // ใช้การคูณด้วย 10000 เพื่อรองรับค่าทศนิยม 4 ตำแหน่ง
+                RUB: detailEX[1] * 10000,   
+                INR: detailEX[2] * 10000    
             }
           )
         } catch (err: any) {
@@ -115,7 +115,7 @@ export default function ExchangeModule() {
         if (!amount || !fromCurrency) return { preCR: 0, postCR: 0 }
 
         const exchangeRateLocal = exchangeRates[fromCurrency]; // อัตราแลกเปลี่ยนของสกุลเงินที่เลือก
-        const collateralValue = Number(amount) * 100; // แปลงเป็นหน่วยที่มี 2 ตำแหน่งทศนิยม (scaled by 100)
+        const collateralValue = Number(amount) * 10000; // แปลงเป็นหน่วยที่มี 2 ตำแหน่งทศนิยม (scaled by 100)
         const bricsPreCR = collateralValue / exchangeRateLocal; // จำนวน BRICS ก่อนใช้ collateralRatio
         const bricsPostCR = (bricsPreCR * 100) / collateralRatio; // จำนวน BRICS หลังใช้ collateralRatio
     
@@ -267,13 +267,13 @@ export default function ExchangeModule() {
             <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="font-semibold">Estimated Rate</div>
                 <div className="text-sm">
-                    - 1 BRICS ≈ {(exchangeRate / 100).toFixed(2)} {currencies.find((c) => c.id === fromCurrency)?.label} 
+                    - 1 BRICS ≈ {(exchangeRate / 10000).toFixed(4)} {currencies.find((c) => c.id === fromCurrency)?.label} 
                 </div>
                 <div className="text-sm">
-                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} to BRICS สามารถทำได้โดยการหาร 1 ด้วย {exchangeRate / 100}
+                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} to BRICS สามารถทำได้โดยการหาร 1 ด้วย {exchangeRate / 10000}
                 </div>
                 <div className="text-sm ">
-                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} ≈ {(100 / exchangeRate).toFixed(2)} BRICS
+                    - 1 {currencies.find((c) => c.id === fromCurrency)?.label} ≈ {(10000 / exchangeRate).toFixed(4)} BRICS
                 </div>
                 <div className="font-semibold mt-2">Estimated BRICS mint</div>
                 <div className="text-sm">

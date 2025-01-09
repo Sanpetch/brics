@@ -177,19 +177,17 @@ export default function CBDCPools() {
      
       const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
 
-      // ดึงค่าอัตราแลกเปลี่ยน 1 BRICS = ? CNY
       const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
-      const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+      const baseRateFormatted = Number(baseRateBigInt) / 10000; 
 
       setBaseRate(baseRateFormatted);
 
-      // ดึงอัตราแลกเปลี่ยนสำหรับสกุลเงินอื่น ๆ และคำนวณอัตราแลกเปลี่ยนเทียบกับ BRICS
       const details = [];
       for (const currency of currencies) {
         const rateBigInt = await vaultContract.getExchangeRate(currency.id);
-        const rateFormatted = Number(rateBigInt) / 100;
+        const rateFormatted = Number(rateBigInt) / 10000;
 
-        const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
+        const bricsToCurrency = (baseRateFormatted / rateFormatted); 
 
         details.push({
           label: currency.label,
@@ -236,12 +234,13 @@ export default function CBDCPools() {
           const tokensToLiquidate = Number(tokensToLiquidateBigInt);
           */
           const tokensToLiquidate = Number(result[4]);
-          console.log(tokensToLiquidate);
+          console.log(`Tokens to liquidate for ${currency.id}:`, tokensToLiquidate);
+
           if (tokensToLiquidate > 0) {
             previewMessages.push({
               symbol: currency.id,
               status: "Warning",
-              message: `You need to liquidate ${tokensToLiquidate/100} ${currency.label} tokens due to insufficient collateral.`,
+              message: `You need to liquidate ${tokensToLiquidate/10000} ${currency.label} tokens due to insufficient collateral.`,
               currency
             });
           } else {
@@ -274,7 +273,7 @@ export default function CBDCPools() {
       
       console.log(currency.id);
       console.log(accountData?.address);
-      // Call liquidate function
+      
       const tx = await vaultContract.liquidate(accountData?.address, currency.id);
       await tx.wait(); // Wait for transaction confirmation
   
@@ -303,10 +302,10 @@ export default function CBDCPools() {
      
       for (const currency of currencies) {
         const exchangeRateBigInt = await vaultContract.getExchangeRate(currency.id);
-        const exchangeRate = Number(exchangeRateBigInt) / 100; // แปลง BigInt เป็น number
+        const exchangeRate = Number(exchangeRateBigInt) / 10000; 
         console.log(exchangeRate);
         // Convert the exchange rate to a percentage for easier comparison
-        const effectiveRatio = (100 * exchangeRate) / collateralRatioBigInt;
+        const effectiveRatio = (10000 * exchangeRate) / collateralRatioBigInt;
         //console.log("effectiveRatio: " + effectiveRatio);
         
         if (effectiveRatio < 100) {
@@ -360,14 +359,10 @@ export default function CBDCPools() {
             className="flex items-center justify-between p-2 bg-gray-50 rounded"
             >
                 <div>
-                    <div className="text-sm text-gray-500 font-medium">Wallet</div>
                     <div className="text-sm text-gray-500 font-medium">Vault</div>
                 </div>
                 <div className="text-right">
                     <div className="text-right">
-                      <div className="text-sm font-medium">
-                      {balanceOfBRICS || 0.00} Tokens
-                      </div>
                       <div className="text-sm font-medium">
                       {mintedOfBRICSbyUser || 0.00} Tokens
                       </div>
@@ -437,7 +432,7 @@ export default function CBDCPools() {
                     className="w-full bg-red-600 text-white rounded-lg p-3 hover:bg-red-700 transition-colors mt-2"
                     onClick={() => handleLiquidate(status.currency)} // ส่ง currency เข้าไปในฟังก์ชัน
                   >
-                    Force Liquidation
+                    Liquidate
                   </button>
                 )}
                 </Alert>

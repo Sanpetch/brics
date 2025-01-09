@@ -175,7 +175,7 @@ export default function VaultStatus() {
 
       // ดึงค่าอัตราแลกเปลี่ยน 1 BRICS = ? CNY
       const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
-      const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+      const baseRateFormatted = Number(baseRateBigInt) / 10000; // แปลงจาก BigInt และปรับทศนิยม
 
       setBaseRate(baseRateFormatted);
 
@@ -183,7 +183,7 @@ export default function VaultStatus() {
       const details = [];
       for (const currency of currencies) {
         const rateBigInt = await vaultContract.getExchangeRate(currency.id);
-        const rateFormatted = Number(rateBigInt) / 100;
+        const rateFormatted = Number(rateBigInt) / 10000;
 
         const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
 
@@ -205,6 +205,7 @@ export default function VaultStatus() {
 
 
   const handleSETEX = async () => {
+    
     if (!amountEx) {
         alert("Please enter an amount.");
         return;
@@ -222,13 +223,10 @@ export default function VaultStatus() {
             alert("Invalid currency selected.");
             return;
         }
-
-        // แปลงจำนวนเงินเป็นหน่วยที่มี 2 ทศนิยม
-        const amountInWei = ethers.parseUnits(amountEx, 2); 
-       
+      
+        const amountInWei = Math.round(Number(amountEx) * 10000);
+        console.log(amountInWei);
         // ********************* ยังไม่มี dialog wating (Loading) *********************
-        
-        // เรียกฟังก์ชัน depositCollateral ใน Smart Contract
         const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
         const depositTx = await vaultContract.setExchangeRate(
             selectedCurrency.id.toUpperCase(),
@@ -238,6 +236,7 @@ export default function VaultStatus() {
     
         alert("Successful!");
         window.location.reload();
+        
     } catch (error) {
         console.error("Error during deposit:", error);
         alert("Something went wrong. Please try again.");
@@ -284,7 +283,7 @@ export default function VaultStatus() {
         <div className="space-y-2 mt-4 text-sm">
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-600">BRICS Total Supply</span>
-            <span className="font-semibold">{bricstotalSupply} BRICS</span>
+            <span className="font-semibold">{bricstotalSupply} Tokens</span>
           </div>
         
           <div className="flex justify-between items-center text-sm ">
@@ -311,7 +310,7 @@ export default function VaultStatus() {
         <div className="space-y-2 mt-4">
           {exchangeDetails.map((detail, index) => (
             <div key={index} className="text-xs flex justify-between items-center">
-              <span className="font-semibold">1 BRICS = {baseRate.toFixed(2)} CNY / {detail.rate.toFixed(2)} CNY</span> 
+              <span className="font-semibold">1 BRICS = {baseRate.toFixed(4)} CNY / {detail.rate.toFixed(4)} CNY</span> 
               <span className="font-bold"> = {detail.bricsToCurrency.toFixed(2)} {detail.id} </span>
             </div>
           ))}

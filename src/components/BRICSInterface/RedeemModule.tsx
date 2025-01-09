@@ -74,7 +74,7 @@ export default function ExchangeModule() {
          
           const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
           const baseRateBigInt = await vaultContract.getExchangeRate(currencies[0].id);
-          const baseRateFormatted = Number(baseRateBigInt) / 100; // แปลงจาก BigInt และปรับทศนิยม
+          const baseRateFormatted = Number(baseRateBigInt) / 10000; 
     
           setBaseRate(baseRateFormatted);
     
@@ -82,7 +82,7 @@ export default function ExchangeModule() {
           const detailEX = [];
           for (const currency of toCurrencies) {
             const rateBigInt = await vaultContract.getExchangeRate(currency.id);
-            const rateFormatted = Number(rateBigInt) / 100;
+            const rateFormatted = Number(rateBigInt) / 10000;
     
             const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
           
@@ -99,9 +99,9 @@ export default function ExchangeModule() {
          
           setExchangeRates(
             {
-                CNY: detailEX[0],    // 1 BRICS = 0.26 CNY -> scaled by 100
-                RUB: detailEX[1],   // 1 BRICS = 3.77 RUB -> scaled by 100
-                INR: detailEX[2]    // 1 BRICS = 3.02 INR -> scaled by 100
+              CNY: detailEX[0] * 10000,  // ใช้การคูณด้วย 10000 เพื่อรองรับค่าทศนิยม 4 ตำแหน่ง
+              RUB: detailEX[1] * 10000,
+              INR: detailEX[2] * 10000
             }
           );
           
@@ -117,7 +117,7 @@ export default function ExchangeModule() {
         const exchangeRateLocal = exchangeRates[toCurrency] || 1;
        
         const bricsAmount = Number(amount);
-        const collateralPreFloor = bricsAmount * exchangeRateLocal; // จำนวนเงินค้ำประกันก่อนปัดเศษ
+        const collateralPreFloor = bricsAmount * exchangeRateLocal / 10000; // หารด้วย 10000 เพื่อรองรับทศนิยม 4 ตำแหน่ง
         const collateralPostFloor = Math.floor(collateralPreFloor); // ปัดเศษลงเป็นจำนวนเต็ม
     
         return { preFloor: collateralPreFloor, postFloor: collateralPostFloor };
@@ -184,7 +184,8 @@ export default function ExchangeModule() {
             const redeemTx = await vaultContract.redeemCollateral(selectedCurrency.id.toUpperCase(), amountInWei);
             await redeemTx.wait();
 
-            alert(`Redeem successful! You received ${  collateralDetails.postFloor} ${selectedCurrency.label}.`);
+            alert(`Redeem successful! You received ${collateralDetails.postFloor.toFixed(4)} ${selectedCurrency.label}.`);
+
             window.location.reload();
         } catch (error) {
             console.error("Error during redeem:", error);
@@ -258,18 +259,18 @@ export default function ExchangeModule() {
                 <div className="bg-gray-50 p-4 rounded-lg mt-4">
                     <div className="text-sm text-gray-600">Estimated Rate</div>
                     <div className="font-semibold mb-2">
-                    1 BRICS = {exchangeRate} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    1 BRICS = {(exchangeRate / 10000).toFixed(4)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
 
                     <div className="text-sm text-gray-600 mt-2">Steps of Calculation</div>
                     <div className="text-sm">
-                    -  collateral = {amount} /  {exchangeRate} ≈ {collateralDetails.preFloor}
+                    -  collateral = {amount} *  {exchangeRate / 10000} ≈ {collateralDetails.preFloor.toFixed(4)}
                     </div>
                     <div className="text-sm">
-                    - จำนวนเงินค้ำประกันหลังปัดเศษ: {collateralDetails.postFloor} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    - จำนวนเงินค้ำประกันหลังปัดเศษ: {collateralDetails.postFloor.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
                     <div className="font-semibold mt-2">
-                    Estimated redeem: {collateralDetails.postFloor} {toCurrencies.find((c) => c.id === toCurrency)?.label}
+                    Estimated redeem: {collateralDetails.postFloor.toFixed(2)} {toCurrencies.find((c) => c.id === toCurrency)?.label}
                     </div>
                 </div>
             )}
