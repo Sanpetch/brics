@@ -115,11 +115,12 @@ export default function ExchangeModule() {
         if (!amount || !fromCurrency) return { preCR: 0, postCR: 0 }
 
         const exchangeRateLocal = exchangeRates[fromCurrency]; // อัตราแลกเปลี่ยนของสกุลเงินที่เลือก
-        const collateralValue = Number(amount) * 10000; // แปลงเป็นหน่วยที่มี 2 ตำแหน่งทศนิยม (scaled by 100)
-        const bricsPreCR = collateralValue / exchangeRateLocal; // จำนวน BRICS ก่อนใช้ collateralRatio
-        const bricsPostCR = (bricsPreCR * 100) / collateralRatio; // จำนวน BRICS หลังใช้ collateralRatio
+     
+        const collateralValue = Number(amount) / (exchangeRateLocal / 10000); // แปลงเป็นหน่วยที่มี 2 ตำแหน่งทศนิยม (scaled by 100)
+        const bricsPreCR = collateralValue ; // จำนวน BRICS ก่อนใช้ collateralRatio
+        const bricsPostCR = bricsPreCR / collateralRatio; // จำนวน BRICS หลังใช้ collateralRatio
     
-        return { preCR: bricsPreCR, postCR: Math.floor(bricsPostCR) }; // ปัดเศษลงให้เป็นจำนวนเต็ม
+        return { preCR: bricsPreCR, postCR: bricsPostCR };
     }
 
     useEffect(() => {
@@ -160,7 +161,7 @@ export default function ExchangeModule() {
 
             // แปลงจำนวนเงินเป็นหน่วยที่มี 2 ทศนิยม
             const amountInWei = ethers.parseUnits(amount, 2); 
-
+            
             if(selectedCurrency.id == 'CNY')
             {
                 const contract_CNY = new ethers.Contract(CNY_CBDC, CNY_CBDC_ABI, signer);
@@ -185,7 +186,6 @@ export default function ExchangeModule() {
                 const approveTx = await contract_INR.approve(vaultAddress, amountInWei);
                 await approveTx.wait(); 
             }
-            
             // ********************* ยังไม่มี dialog wating (Loading) *********************
 
             // เรียกฟังก์ชัน depositCollateral ใน Smart Contract

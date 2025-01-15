@@ -64,7 +64,6 @@ export default function CBDCPools() {
       const contract_RUB = new ethers.Contract(RUB_CBDC, RUB_CBDC_ABI, signer);
       const contract_BRICS = new ethers.Contract(BRICS, BRICS_ABI, signer);
 
-
       //CNY
       const rawBalance = await vaultContract.getUserDeposit(
           accountData?.address,
@@ -209,57 +208,55 @@ export default function CBDCPools() {
       if (!window.ethereum) {
         throw new Error("No crypto wallet found");
       }
-
+  
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
-
+  
       const previewMessages = [];
-
+  
       for (const currency of currencies) {
-        const result = await vaultContract.previewLiquidate(accountData?.address, currency.id);
-        if(result)
+        
+        try
         {
-          /*
-          const bricsMintedBigInt = result[0];
-          const actualCollateralValueBigInt = result[1];
-          const requiredCollateralValueBigInt = result[2];
-          const deficitCollateralValueBigInt = result[3];
-          const tokensToLiquidateBigInt = result[4];
-
-          const bricsMinted = Number(bricsMintedBigInt);
-          const actualCollateralValue = Number(actualCollateralValueBigInt);
-          const requiredCollateralValue = Number(requiredCollateralValueBigInt);
-          const deficitCollateralValue = Number(deficitCollateralValueBigInt);
-          const tokensToLiquidate = Number(tokensToLiquidateBigInt);
-          */
-          const tokensToLiquidate = Number(result[4]);
-          console.log(`Tokens to liquidate for ${currency.id}:`, tokensToLiquidate);
-
-          if (tokensToLiquidate > 0) {
-            previewMessages.push({
-              symbol: currency.id,
-              status: "Warning",
-              message: `You need to liquidate ${tokensToLiquidate/10000} ${currency.label} tokens due to insufficient collateral.`,
-              currency
-            });
-          } else {
-            previewMessages.push({
-              symbol: currency.id,
-              status: "OK",
-              message: `${currency.label} is maintaining optimal ratios.`,
-            });
+          const result = await vaultContract.previewLiquidate(accountData?.address, currency.id);
+          
+          if (result) {
+            const tokensToLiquidate = Number(result[5]) / 100; // tokensToLiquidate
+            //console.log(`Tokens to liquidate for ${currency.id}:`, tokensToLiquidate);
+            if (tokensToLiquidate > 0) {
+              previewMessages.push({
+                symbol: currency.id,
+                status: "Warning",
+                message: `You need to liquidate ${tokensToLiquidate.toFixed(2)} ${currency.id} tokens due to insufficient collateral.`,
+                currency
+              });
+              console.log(previewMessages);
+            } else {
+              previewMessages.push({
+                symbol: currency.id,
+                status: "OK",
+                message: `${currency.label} is maintaining optimal ratios.`,
+              });
+            }
           }
         }
-
-        setStatusMessages(previewMessages);
+        catch (error) {
+          continue;
+        }
+      }
+      if (previewMessages.length === 0) {
+        console.log("No liquidation required for any currency.");
       }
 
-      } catch (error) {
-        //console.error("Error previewing liquidation:", error);
-        //alert("Failed to preview liquidation. Please try again.");
-      }
+      setStatusMessages(previewMessages);
+    } catch (error) {
+      //console.log("Error previewing liquidation:", error);
+      console.log("Error previewing liquidation");
+      //setError(error.message || "Failed to preview liquidation. Please try again.");
+    }
   };
+  
 
   const handleLiquidate = async (currency) => {
     try {
@@ -270,16 +267,16 @@ export default function CBDCPools() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
-      
-      console.log(currency.id);
-      console.log(accountData?.address);
-      
+  
+      console.log(`Initiating liquidation for ${currency.id}`);
+  
+      // ส่งธุรกรรมไปยัง Vault Contract
       const tx = await vaultContract.liquidate(accountData?.address, currency.id);
-      await tx.wait(); // Wait for transaction confirmation
+      await tx.wait(); // รอการยืนยันธุรกรรม
   
       alert(`Successfully liquidated ${currency.label} tokens.`);
-
-      window.location.reload();
+      window.location.reload(); // รีเฟรชหน้าหลังจากทำการ Liquidate เสร็จ
+  
     } catch (error) {
       console.error("Error during liquidation:", error);
       alert("Failed to perform liquidation. Please try again.");

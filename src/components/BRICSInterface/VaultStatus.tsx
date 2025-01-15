@@ -113,8 +113,8 @@ export default function VaultStatus() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      const BRICSContract = new ethers.Contract(BRICS, Vault_ABI, signer);
-      const totalSupply = await BRICSContract.totalSupply();
+      const vaultContract = new ethers.Contract(vaultAddress, Vault_ABI, signer);
+      const totalSupply = await vaultContract.getTotalMintedBRICS();
       const bricsTotal = ethers.formatUnits(totalSupply, 2); // ใช้ทศนิยม 2 ตำแหน่ง
       
       const totalBRICSFormatted = Intl.NumberFormat('en-US', {
@@ -185,7 +185,11 @@ export default function VaultStatus() {
         const rateBigInt = await vaultContract.getExchangeRate(currency.id);
         const rateFormatted = Number(rateBigInt) / 10000;
 
-        const bricsToCurrency = (baseRateFormatted / rateFormatted); // คำนวณอัตราแลกเปลี่ยน 1 BRICS = ? สกุลเงินอื่น
+
+        const rateCNYBigInt = await vaultContract.getExchangeRateCNY(currency.id);
+        const bricsToCurrency = Number(rateCNYBigInt) / 10000;
+        //const bricsToCurrency = (baseRateFormatted / rateFormatted); 
+        //const bricsToCurrency = 0; 
 
         details.push({
           label: currency.label,
@@ -310,8 +314,8 @@ export default function VaultStatus() {
         <div className="space-y-2 mt-4">
           {exchangeDetails.map((detail, index) => (
             <div key={index} className="text-xs flex justify-between items-center">
-              <span className="font-semibold">1 BRICS = {baseRate.toFixed(4)} CNY / {detail.rate.toFixed(4)} CNY</span> 
-              <span className="font-bold"> = {detail.bricsToCurrency.toFixed(2)} {detail.id} </span>
+              <span className="font-semibold">1 BRICS =  {detail.rate.toFixed(4) } {detail.id} </span> 
+              <span className="font-bold">{} = {detail.bricsToCurrency.toFixed(4)} CNY </span>
             </div>
           ))}
         </div>

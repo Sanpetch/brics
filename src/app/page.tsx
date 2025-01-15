@@ -79,12 +79,12 @@ export default function Home() {
           <PoolDepositModule />
           <PoolSWAPModule />
           <PoolWithdrawModule />
-
-
+          {
+          /*
           <Analytics />
           <RiskManagement />
-
-
+          */
+          }
         </div>
       </div>
     </WalletProvider>

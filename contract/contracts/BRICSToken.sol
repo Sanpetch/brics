@@ -10,7 +10,7 @@ contract BRICSToken is ERC20 {
     event VaultCheck(address indexed vaultAddress, address indexed caller);
    
     constructor() ERC20("BRICS", "BRICS") {
-        _mint(msg.sender, 1000000 * (10 ** decimals())); // need use 2 or 4 digit.
+        _mint(msg.sender, 10000000 * (10 ** decimals())); // need use 2 or 4 digit.
         // vault = msg.sender; // Vault Address ถูกตั้งในตอน Deploy
         // Vault address จะถูกตั้งภายหลังจากการ Deplosy
     }

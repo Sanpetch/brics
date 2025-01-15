@@ -115,10 +115,9 @@ export default function ExchangeModule() {
         if (!amount || !toCurrency) return { preFloor: 0, postFloor: 0 };
       
         const exchangeRateLocal = exchangeRates[toCurrency] || 1;
-       
         const bricsAmount = Number(amount);
-        const collateralPreFloor = bricsAmount * exchangeRateLocal / 10000; // หารด้วย 10000 เพื่อรองรับทศนิยม 4 ตำแหน่ง
-        const collateralPostFloor = Math.floor(collateralPreFloor); // ปัดเศษลงเป็นจำนวนเต็ม
+        const collateralPreFloor = bricsAmount * (exchangeRateLocal / 10000) * 100; // หารด้วย 10000 เพื่อรองรับทศนิยม 4 ตำแหน่ง
+        const collateralPostFloor = collateralPreFloor;
     
         return { preFloor: collateralPreFloor, postFloor: collateralPostFloor };
 
@@ -169,7 +168,7 @@ export default function ExchangeModule() {
                 alert("Invalid currency selected.");
                 return;
             }
-
+           
             const collateralDetails = calculateCollateralToReceive();
           
             console.log("Redeem Amount (BRICS):", amount);

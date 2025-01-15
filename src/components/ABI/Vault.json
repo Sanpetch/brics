@@ -50,6 +50,42 @@
 	{
 		"inputs": [
 			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "depositCollateral",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
+		"name": "liquidate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "contract IERC20",
 				"name": "_asset",
 				"type": "address"
@@ -296,40 +332,29 @@
 		"type": "event"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "symbol",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "depositCollateral",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
+				"indexed": true,
 				"internalType": "address",
 				"name": "user",
 				"type": "address"
 			},
 			{
+				"indexed": false,
 				"internalType": "string",
 				"name": "symbol",
 				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "tokensLiquidated",
+				"type": "uint256"
 			}
 		],
-		"name": "liquidate",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
+		"name": "Liquidate",
+		"type": "event"
 	},
 	{
 		"inputs": [
@@ -354,6 +379,37 @@
 		],
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "bricsMinted",
+				"type": "uint256"
+			}
+		],
+		"name": "MintBRICS",
+		"type": "event"
 	},
 	{
 		"inputs": [
@@ -383,6 +439,37 @@
 		],
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "bricsAmount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "collateralReturned",
+				"type": "uint256"
+			}
+		],
+		"name": "RedeemBRICS",
+		"type": "event"
 	},
 	{
 		"inputs": [
@@ -429,6 +516,24 @@
 			}
 		],
 		"name": "setExchangeRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "rateCNY",
+				"type": "uint256"
+			}
+		],
+		"name": "setExchangeRateCNY",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -854,7 +959,39 @@
 				"type": "string"
 			}
 		],
+		"name": "getExchangeRateCNY",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
 		"name": "getTotalDeposits",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getTotalMintedBRICS",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1069,17 +1206,22 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "actualCollateralValue",
+				"name": "actualCollateralValueCNY",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "requiredCollateralValue",
+				"name": "requiredCollateralValueCNY",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "deficitCollateralValue",
+				"name": "requiredCollateralValueSymbol",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "deficitCollateralValueCNY",
 				"type": "uint256"
 			},
 			{
@@ -1232,6 +1374,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "totalMintedBRICS",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "totalSupply",
 		"outputs": [
 			{
@@ -1304,6 +1459,11 @@
 			{
 				"internalType": "uint256",
 				"name": "exchangeRate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "exchangeRateCNY",
 				"type": "uint256"
 			}
 		],
