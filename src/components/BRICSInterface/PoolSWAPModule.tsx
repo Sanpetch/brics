@@ -201,6 +201,8 @@ export default function PoolSWAPModule() {
       // Reset form
       setFromAmount("");
       setToAmount("");
+      alert("Swapping successful!");
+      window.location.reload();
 
     } catch (error) {
       console.error('Swap failed:', error);
@@ -570,7 +572,37 @@ export default function PoolSWAPModule() {
                 (fromToken === "rub" && Number(fromAmount) > Number(ethers.formatUnits(poolsInfo[1][1], 2))) ||
                 (fromToken === "inr" && Number(fromAmount) > Number(ethers.formatUnits(poolsInfo[1][2], 2)))
               )
-            ))
+            ))||
+            (poolsInfo && (fromToken === "brs" ? (
+              // When BRICS is fromToken (token0)
+              (toToken === "cny" && (
+                poolsInfo[1][0] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[1][0] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              )) ||
+              (toToken === "rub" && (
+                poolsInfo[1][1] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[1][1] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              )) ||
+              (toToken === "inr" && (
+                poolsInfo[1][2] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[1][2] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              ))
+            ) : (
+              // When BRICS is toToken (token1)
+              (fromToken === "cny" && (
+                poolsInfo[2][0] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[2][0] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              )) ||
+              (fromToken === "rub" && (
+                poolsInfo[2][1] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[2][1] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              )) ||
+              (fromToken === "inr" && (
+                poolsInfo[2][2] <= ethers.parseUnits("1000", 2) ||
+                (Number(toAmount) > 0 && poolsInfo[2][2] - ethers.parseUnits(toAmount, 2) <= ethers.parseUnits("1000", 2))
+              ))
+            )
+            )) 
           )}
           onClick={handleSwap}
         >

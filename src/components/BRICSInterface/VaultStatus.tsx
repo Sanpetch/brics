@@ -58,7 +58,6 @@ export default function VaultStatus() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0].id);
   const [amountEx, setAmountEx] = useState("");
 
-
   const fetchIsAdmin = async () => {
     try {
       if (!window.ethereum) {
@@ -207,7 +206,6 @@ export default function VaultStatus() {
   };
   
 
-
   const handleSETEX = async () => {
     
     if (!amountEx) {
@@ -238,6 +236,7 @@ export default function VaultStatus() {
         );
         await depositTx.wait(); // รอการฝากสำเร็จ
     
+
         alert("Successful!");
         window.location.reload();
         
@@ -369,12 +368,11 @@ export default function VaultStatus() {
                   name="amountEx"
                   type="number"
                   className="w-full p-2 border rounded-lg"
-                  placeholder="Enter rate (26, 377, 302)"
+                  placeholder="Enter rate (0.2623, 3.5907, 3.0500)"
                   value={amountEx}
                   onChange={(e) => setAmountEx(e.target.value)}
               />
               </div>
-  
   
               <div className="pt-2">
                 <button 

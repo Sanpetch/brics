@@ -312,7 +312,7 @@ export default function PoolDeposit() {
       // Call addLiquidity function
       const tx = await poolContract.addLiquidity(
         fromCurrency.toUpperCase(),
-        toCurrency.toUpperCase(),
+        "BRICS",
         amountInWei,
         amountInWei1
       );
@@ -434,7 +434,7 @@ export default function PoolDeposit() {
         )}
         onClick={handleAddLiquidity}
       >
-        {loading ? "Processing..." : "Add Liquidity"}
+        {loading ? "Processing..." : "Deposit"}
       </button>
     </div>
   )

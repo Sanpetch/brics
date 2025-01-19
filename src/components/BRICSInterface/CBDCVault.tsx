@@ -222,7 +222,9 @@ export default function CBDCPools() {
           const result = await vaultContract.previewLiquidate(accountData?.address, currency.id);
           
           if (result) {
+            console.log(result);
             const tokensToLiquidate = Number(result[5]) / 100; // tokensToLiquidate
+
             //console.log(`Tokens to liquidate for ${currency.id}:`, tokensToLiquidate);
             if (tokensToLiquidate > 0) {
               previewMessages.push({

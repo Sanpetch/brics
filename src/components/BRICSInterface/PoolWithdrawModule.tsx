@@ -318,7 +318,7 @@ export default function PoolRemoveLiquidityModule() {
             <span>{token1}:</span>
             <span>{userLiquidity.token1Amount}</span>
           </div>
-          <div className="flex justify-between text-sm text-gray-600">
+          <div className="flex justify-between text-sm">
             <span>LP Tokens:</span>
             <span>{userLiquidity.liquidityTokens}</span>
           </div>
@@ -492,11 +492,53 @@ export default function PoolRemoveLiquidityModule() {
             Number(amount1) <= 0 ||
             loading ||
             Number(amount0) > Number(userLiquidity.token0Amount) ||
-            Number(amount1) > Number(userLiquidity.token1Amount)
+            Number(amount1) > Number(userLiquidity.token1Amount) ||
+            (poolsInfo && poolsInfo[1] && poolsInfo[2] && (
+              (token0 === "BRICS" ? (
+                // When BRICS is token0, check reverse order
+                (token1 === "CNY" && (
+                  poolsInfo[2][0] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[1][0] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[2][0] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[1][0] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                )) ||
+                (token1 === "RUB" && (
+                  poolsInfo[2][1] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[1][1] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[2][1] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[1][1] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                )) ||
+                (token1 === "INR" && (
+                  poolsInfo[2][2] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[1][2] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[2][2] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[1][2] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                ))
+              ) : (
+                // Original checks when BRICS is token1
+                (token0 === "CNY" && (
+                  poolsInfo[1][0] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[2][0] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[1][0] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[2][0] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                )) ||
+                (token0 === "RUB" && (
+                  poolsInfo[1][1] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[2][1] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[1][1] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[2][1] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                )) ||
+                (token0 === "INR" && (
+                  poolsInfo[1][2] <= ethers.parseUnits("1000", 2) ||
+                  poolsInfo[2][2] <= ethers.parseUnits("1000", 2) ||
+                  (poolsInfo[1][2] - ethers.parseUnits(amount0 || "0", 2) <= ethers.parseUnits("1000", 2)) ||
+                  (poolsInfo[2][2] - ethers.parseUnits(amount1 || "0", 2) <= ethers.parseUnits("1000", 2))
+                ))
+              ))))
           )}
           onClick={handleRemoveLiquidity}
         >
-          {loading ? 'Processing...' : 'Remove Liquidity'}
+          {loading ? 'Processing...' : 'Withdraw'}
         </button>
       </div>
     </div>
