@@ -46,6 +46,7 @@ export default function PoolModule() {
     };
 
     const fetchPoolsAvailability = async () => {
+      
         try {
           if (!window.ethereum) {
             throw new Error("No crypto wallet found");
@@ -57,14 +58,13 @@ export default function PoolModule() {
       
           // Call getAllPoolsAvailability
           const [poolNames, reserves0, reserves1, isAvailable] = await poolContract.getAllPoolsAvailability();
-          /*
-          console.log({
+      
+          /*console.log({
             poolNamesLength: poolNames.length,
             reserves0Length: reserves0.length,
             reserves1Length: reserves1.length,
             isAvailableLength: isAvailable.length,
-          });
-          */
+          });*/
       
           // Align array lengths
           const minLength = Math.min(
@@ -88,9 +88,11 @@ export default function PoolModule() {
               name = `${poolNames[i]}/${poolNames[1]}`;
               poolsData.push({
                 name: name,
-                reserve0: ethers.formatUnits(resolvedReserves0[0].toString(), 2),
-                reserve1: ethers.formatUnits(resolvedReserves1[0].toString(), 2),
-                isAvailable: resolvedIsAvailable[0],
+                reserve0: resolvedReserves0[0].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves0[0].toString(), 2) : "0",
+                reserve1: resolvedReserves1[0].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves1[0].toString(), 2) : "0",
+                isAvailable: resolvedIsAvailable[0]
               });
             }
             else if(poolNames[i]== 'RUB')
@@ -98,9 +100,11 @@ export default function PoolModule() {
               name = `${poolNames[i]}/${poolNames[3]}`;
               poolsData.push({
                 name: name,
-                reserve0: ethers.formatUnits(resolvedReserves0[1].toString(), 2),
-                reserve1: ethers.formatUnits(resolvedReserves1[1].toString(), 2),
-                isAvailable: resolvedIsAvailable[1],
+                reserve0: resolvedReserves0[1].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves0[1].toString(), 2) : "0",
+                reserve1: resolvedReserves1[1].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves1[1].toString(), 2) : "0",
+                isAvailable: resolvedIsAvailable[1]
               });
             }
             else if(poolNames[i]== 'INR')
@@ -108,9 +112,11 @@ export default function PoolModule() {
               name = `${poolNames[i]}/${poolNames[5]}`;
               poolsData.push({
                 name: name,
-                reserve0: ethers.formatUnits(resolvedReserves0[2].toString(), 2),
-                reserve1: ethers.formatUnits(resolvedReserves1[2].toString(), 2),
-                isAvailable: resolvedIsAvailable[2],
+                reserve0: resolvedReserves0[2].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves0[2].toString(), 2) : "0",
+                reserve1: resolvedReserves1[2].toString() !== "0" ? 
+                ethers.formatUnits(resolvedReserves1[2].toString(), 2) : "0",
+                isAvailable: resolvedIsAvailable[2]
               });
             }
             
@@ -122,6 +128,8 @@ export default function PoolModule() {
           setError(err.message || "Failed to fetch pools availability");
         }
       };
+
+    
   
     useEffect(() => {
       if (accountData?.address) {

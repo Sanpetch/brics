@@ -6,30 +6,27 @@ contract FeeManager {
 
     uint256 public baseFee;
     uint256 public lowFee; 
-    uint256 public protocolFee;
-    uint256 public depositFee;
-    uint256 public withdrawFee;
-    uint256 public lowDepositFee;
+    uint256 public protocolFee;   
     uint256 public constant FEE_DENOMINATOR = 10000;
-    uint256 public minimumLiquidity = 1000;
-    uint256 public constant RATE_PRECISION = 1000;// 1000=1
+    uint256 public minimumLiquidity;
+    uint256 public constant RATE_PRECISION = 10000;// 10000=1
 
     event BaseFeeUpdated(uint256 newValue);
     event LowFeeUpdated(uint256 newValue);
     event ProtocolFeeUpdated(uint256 newValue);
-    event DepositFeeUpdated(uint256 newValue);
-    event LowDepositFeeUpdated(uint256 newValue);
+
     event MinimumLiquidityUpdated(uint256 oldValue, uint256 newValue);
     event FeeCollectorUpdated(address newCollector);
     event WithdrawFeeUpdated(uint256 newValue);
 
     constructor (){
-        baseFee = 200;         // total 0.2%
-        lowFee = 50;          // 0.05%
-        protocolFee = 25;    // 25% of fee(0.2) goes to protocol
-        depositFee = 100;      // 0.1% for deposits
-        lowDepositFee = 25;    // 0.025% when liquidity low
-        withdrawFee = 0; // No fee for withdrawals
+        feeCollector = 0xAc2Edb624621f81E5f03E67c2B74a35563951bd6; //Admin wallet
+        minimumLiquidity = 1000 * RATE_PRECISION; // 1000.0000 เหรียญ
+        baseFee = 2000;         // total 0.2%
+        lowFee = 1000;          // 0.1%
+        protocolFee = 25;    // 25% of total fee(0.2) goes to protocol and 75% to LP for swapping
+       
+        
     }
 
     function setFeeCollector(address _feeCollector) external {
@@ -39,41 +36,23 @@ contract FeeManager {
     }
 
     function setBaseFee(uint256 _baseFee) external   {
-        require(_baseFee <= 1000, "Fee too high");
+        require(_baseFee <= 100000, "Fee too high");
         require(_baseFee >= lowFee, "Must be >= lowFee");
         baseFee = _baseFee;
         emit BaseFeeUpdated(_baseFee);
     }
 
     function setLowFee(uint256 _lowFee) external   {
-        require(_lowFee <= baseFee, "Must be <= baseFee");
-        lowFee = _lowFee;
-        emit LowFeeUpdated(_lowFee);
+        require(_lowFee < baseFee, "Fee too high");
+        baseFee = _lowFee;
+        emit BaseFeeUpdated(_lowFee);
     }
+
 
     function setProtocolFee(uint256 _protocolFee) external   {
-        require(_protocolFee<= 100, "Fee too high");
+        require(_protocolFee<= 10000, "Fee too high");
         protocolFee = _protocolFee;
         emit ProtocolFeeUpdated(_protocolFee);
-    }
-
-    function setDepositFee(uint256 _depositFee) external   {
-        require(_depositFee <= 500, "Fee too high"); 
-        require(_depositFee >= lowDepositFee, "Must be >= lowDepositFee");
-        depositFee = _depositFee;
-        emit DepositFeeUpdated(_depositFee);
-    }
-
-    function setWithdrawFee(uint256 _withdrawFee) external   {
-        require(_withdrawFee <= 500, "Fee too high"); 
-        withdrawFee = _withdrawFee;
-        emit WithdrawFeeUpdated(_withdrawFee);
-    }
-
-    function setLowDepositFee(uint256 _lowDepositFee) external   {
-        require(_lowDepositFee <= depositFee, "Must be <= depositFee");
-        lowDepositFee = _lowDepositFee;
-        emit LowDepositFeeUpdated(_lowDepositFee);
     }
 
     function setMinimumLiquidity(uint256 _minimumLiquidity) external {
@@ -95,41 +74,40 @@ contract FeeManager {
     }
 
 
-    function getProtocolFee(uint256 fee) public view returns (uint256) {
-        return (fee * protocolFee) / 100;
-    }
-
     function calculateSwapFees(
         uint256 reserve0,
         uint256 reserve1,
         bool isToken0,
         uint256 bricsRate
-    ) external view returns (uint256 feeBrics, uint256 protocolFeeBrics) {
-        uint256 fee = isToken0
+    ) external view returns (
+        uint256 totalFeeBrics,
+        uint256 protocolFeeBrics,
+        uint256 lpFeeBrics
+    ) {
+        uint256 totalFee = isToken0
             ? (reserve0 <= minimumLiquidity * 3 ? lowFee : baseFee)
             : (reserve1 <= minimumLiquidity * 3 ? lowFee : baseFee);
             
-        feeBrics = (bricsRate * fee) / RATE_PRECISION;
-        protocolFeeBrics = (bricsRate * getProtocolFee(fee)) / RATE_PRECISION;
+        totalFeeBrics = (bricsRate * totalFee) / RATE_PRECISION;
+        protocolFeeBrics = (totalFeeBrics * protocolFee) / FEE_DENOMINATOR;
+        lpFeeBrics = totalFeeBrics - protocolFeeBrics;
     }
 
-
-    function sqrt(uint256 y) external  pure returns (uint256 z) {
-        if (y > 3) {
-            z = y;
-            uint256 x = y / 2 + 1;
-            while (x < z) {
-                z = x;
-                x = (y / x + x) / 2;
-            }
-        } else if (y != 0) {
-            z = 1;
+    function sqrt(uint256 x) public pure returns (uint256) {
+        if (x == 0) return 0;
+        if (x <= 3) return 1;
+        
+        uint256 z = (x + 1) / 2;
+        uint256 y = x;
+        
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
         }
+        return y;
     }
 
     function min(uint256 x, uint256 y) external pure returns (uint256) {
         return x < y ? x : y;
     }
-
-
 }

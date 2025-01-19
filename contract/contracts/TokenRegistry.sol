@@ -13,10 +13,10 @@ contract TokenRegistry {
     event WeightUpdated(string symbol, uint256 weight);
  
     constructor() {
-        addToken("CNY", 0xd37BaD73F63e3725d364B65717d1c18e5186296f,20);//CNY 20, RUB 50, INR 30
+        addToken("CNY", 0xd37BaD73F63e3725d364B65717d1c18e5186296f,20);//CNY 20, RUB 50, INR 30  0xFb3C40a2F3a57a7DB3D8Cfa050a0fDa7Aed8399F
         addToken("RUB", 0x9876EEAf962ADfc612486C5D54BCb9D8B5e50878,50);
         addToken("INR",0xe3077475D1219088cD002B75c8bB46567D7F37ae,30);
-        addToken("BRICS",0x2a5b1793dE8e791a5e8279387bbddAdCE8bb9C5C,0);
+        addToken("BRICS",0xa65bb3Ef188f5dA6aABf0A9890e1E63D77a3eC53,0);// 0x2a5b1793dE8e791a5e8279387bbddAdCE8bb9C5C
     }
     
     function addToken(string memory symbol, address tokenAddress, uint256 weight) public  {
